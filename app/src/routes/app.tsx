@@ -41,9 +41,30 @@ export default function AppPage() {
   }, [phone])
   useEffect(registerServiceWorker, [])
   return (
-    <WebVaultGate>
-      <WalletPage />
-    </WebVaultGate>
+    <>
+      {OLD_HOST && <MovedBanner />}
+      <WebVaultGate>
+        <WalletPage />
+      </WebVaultGate>
+    </>
+  )
+}
+
+/** Keys live in this origin's storage, so /app stays reachable on the old host and asks people to move by backup. */
+const OLD_HOST = window.location.hostname === "qpay-psi.vercel.app"
+
+function MovedBanner() {
+  return (
+    <Alert className="rounded-none border-x-0 border-t-0">
+      <AlertTitle>Qrypt moved to qrypt.money</AlertTitle>
+      <AlertDescription>
+        Your key stays on this site. To move it, make a backup file in Settings here, then restore it at{" "}
+        <a className="underline" href="https://www.qrypt.money/app">
+          qrypt.money
+        </a>
+        , where Face ID unlock, recovery and notifications work.
+      </AlertDescription>
+    </Alert>
   )
 }
 

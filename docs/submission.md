@@ -74,9 +74,9 @@ Both are in one transaction. The canonical mempool rejects it. We admit it on th
 
 ## Links
 
-- Live app: https://qpay-psi.vercel.app
-- Demo dapp: https://qpay-psi.vercel.app/dapp
-- Chrome extension (load unpacked): https://qpay-psi.vercel.app/qrypt-extension.zip
+- Live app: https://qrypt.money
+- Demo dapp: https://qrypt.money/dapp
+- Chrome extension (load unpacked): https://qrypt.money/qrypt-extension.zip
 - Repo: https://github.com/yashj09/qpay
 - Sidecar fork (BUDGET-010): https://github.com/yashj09/mempool-workshop-sidecar/tree/budget-010
 - Upstream PR: https://github.com/forshtat/mempool-workshop-sidecar/pull/2

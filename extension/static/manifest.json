@@ -45,6 +45,7 @@
     "https://altmempool.forshtat.com/*",
     "https://altmempoolgateway.forshtat.com/*",
     "https://*.trycloudflare.com/*",
+    "https://www.qrypt.money/*",
     "https://qpay-psi.vercel.app/*"
   ]
 }

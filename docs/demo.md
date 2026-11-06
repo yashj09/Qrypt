@@ -1,8 +1,8 @@
 # Demo script (4 minutes, plus 3 minutes of Q&A)
 
 **Setup before going on stage:**
-- The sidecar and tunnel are running detached (see `docs/runbook.md`). The app is live at https://qpay-psi.vercel.app.
-- Browser tab 1: https://qpay-psi.vercel.app (the landing page). Click **Open app** once beforehand so an account exists, then go back.
+- The sidecar and tunnel are running detached (see `docs/runbook.md`). The app is live at https://qrypt.money.
+- Browser tab 1: https://qrypt.money (the landing page). Click **Open app** once beforehand so an account exists, then go back.
 - Browser tab 2: the explorer, open on the last transaction (link in the README).
 - Run `pnpm send` once to warm up. Check the account shows USDC and 0 ETH.
 - Backup: the recorded video (`docs/media/`, made on the day).
@@ -43,7 +43,7 @@ Open the **Stress tests** tab in the inspector.
 
 ## 3:00 to 3:30. It's a whole wallet
 
-Click the Qrypt icon in the toolbar: the same wallet as a popup. Hit **Fullscreen** for the dashboard tab, then open https://qpay-psi.vercel.app/dapp in a new tab.
+Click the Qrypt icon in the toolbar: the same wallet as a popup. Hit **Fullscreen** for the dashboard tab, then open https://qrypt.money/dapp in a new tab.
 
 1. The dapp lists **Qrypt** (found through EIP-6963). Click **Connect**; approve in the Qrypt window that pops up.
 2. **Sign in with Qrypt.** "Signature verified onchain via ERC-1271": a Falcon signature, checked by the account itself.

@@ -21,5 +21,18 @@
       "source": "/pay",
       "destination": "/index.html"
     }
+  ],
+  "redirects": [
+    {
+      "source": "/:path((?!api/|app|connect|assets/|icons/|sw\\.js|manifest\\.webmanifest).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "qpay-psi.vercel.app"
+        }
+      ],
+      "destination": "https://www.qrypt.money/:path",
+      "permanent": false
+    }
   ]
 }

@@ -56,7 +56,7 @@ The local chain also starts before Hegota: wait for block 64. There is no stock 
 
 | Piece | Where |
 |---|---|
-| App and onboarding function | Vercel project `qpay` (root `app/`), https://qpay-psi.vercel.app |
+| App and onboarding function | Vercel project `qpay` (root `app/`), https://qrypt.money (the apex redirects to www). The old host https://qpay-psi.vercel.app redirects everything except `/app`, `/connect` and `/api` there; those stay, because accounts made on it keep their key in that origin's storage, and `/app` shows a banner asking them to move by backup file |
 | Our BUDGET-010 sidecar | Laptop: `./devnet/sidecar.sh`, exposed with `cloudflared tunnel --url http://127.0.0.1:14337` |
 | Push watcher (payment notifications) | Laptop: `pnpm push-watcher`, reads `.qpay/push.env` (VAPID keys) and `.env.local` (Blob token) |
 | Recovery and push records | Private Vercel Blob store `qrypt-recovery`: `recovery/*` (Face ID recovery ciphertext), `push/*` (push subscriptions) |
@@ -107,4 +107,4 @@ Accounts made by the old factory keep working on chain, but the app looks up acc
 - `pnpm --filter app build:extension` builds `extension/dist` (load it unpacked). `pnpm --filter app dev:extension` rebuilds on change; reload the extension in `chrome://extensions` after each build.
 - `pnpm pack:extension` builds and zips `extension/dist` into `app/public/qrypt-extension.zip`, which the landing page serves.
 - `pnpm test:extension` runs the whole extension flow in Playwright's Chromium (with `pnpm app` running for the demo dapp).
-- The extension reads the alt-mempool URL from `https://qpay-psi.vercel.app/api/config`, which returns the Vercel env `VITE_ALT_RPC`. After a tunnel restart, updating that env and redeploying is enough; the extension doesn't need rebuilding.
+- The extension reads the alt-mempool URL from `https://www.qrypt.money/api/config` (builds before the rename use `https://qpay-psi.vercel.app/api/config`, which still works), which returns the Vercel env `VITE_ALT_RPC`. After a tunnel restart, updating that env and redeploying is enough; the extension doesn't need rebuilding.

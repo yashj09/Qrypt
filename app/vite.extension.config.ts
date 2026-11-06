@@ -16,7 +16,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: { alias: { "@": resolve(import.meta.dirname, "./src") } },
   define: {
-    "import.meta.env.VITE_API_BASE": JSON.stringify(process.env.VITE_API_BASE ?? "https://qpay-psi.vercel.app"),
+    "import.meta.env.VITE_API_BASE": JSON.stringify(process.env.VITE_API_BASE ?? "https://www.qrypt.money"),
   },
   build: {
     outDir: resolve(import.meta.dirname, "../extension/dist"),

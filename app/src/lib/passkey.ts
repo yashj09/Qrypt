@@ -10,9 +10,13 @@ import { fromHex, random, toHex, type PasskeyKey } from "@/lib/vault/core"
  */
 export const PRF_SALT = toHex(new TextEncoder().encode("qrypt.money passkey prf v1 ....").slice(0, 32))
 
-/** Web passkeys are bound to the site's domain forever, so we only make them on the domain we keep. */
-const PASSKEY_HOSTS = ["qrypt.money", "localhost"]
-export const passkeysAllowedHere = () => location.protocol === "chrome-extension:" || PASSKEY_HOSTS.includes(location.hostname)
+/**
+ * Web passkeys are bound to a domain forever, so we only make them on the domain we keep, and bind them to
+ * `qrypt.money` itself: they then work on the apex and on www, whichever is canonical.
+ */
+const onQrypt = () => location.hostname === "qrypt.money" || location.hostname.endsWith(".qrypt.money")
+const RP_ID = () => (onQrypt() ? "qrypt.money" : undefined) // localhost and the extension use their own origin
+export const passkeysAllowedHere = () => location.protocol === "chrome-extension:" || location.hostname === "localhost" || onQrypt()
 
 interface PrfResults {
   prf?: { enabled?: boolean; results?: { first?: ArrayBuffer } }
@@ -42,6 +46,7 @@ export async function askPasskey(credentialId?: string): Promise<PasskeyKey> {
   const assertion = (await navigator.credentials.get({
     publicKey: {
       challenge: random(32),
+      rpId: RP_ID(),
       allowCredentials: credentialId ? [{ type: "public-key", id: rawCredentialId(credentialId) }] : [],
       userVerification: "required",
       extensions: { prf: { eval: { first: fromHex(PRF_SALT) } } } as AuthenticationExtensionsClientInputs,
@@ -59,7 +64,7 @@ export type CreatedPasskey = { ok: true; key: PasskeyKey } | { ok: false; reason
 export async function createPasskey(label = "Qrypt wallet"): Promise<CreatedPasskey> {
   const credential = (await navigator.credentials.create({
     publicKey: {
-      rp: { name: "Qrypt" },
+      rp: { name: "Qrypt", id: RP_ID() },
       user: { id: random(16), name: label, displayName: label },
       challenge: random(32),
       pubKeyCredParams: [
