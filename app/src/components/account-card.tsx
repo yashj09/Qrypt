@@ -1,22 +1,25 @@
 import { AtomIcon, ShieldCheckIcon } from "lucide-react"
+import type { Address } from "viem"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
-import type { Balances, Deployment } from "@/lib/qpay"
+import type { Balances } from "@/lib/qpay"
 import { eth, short, usdc } from "@/lib/format"
 
 interface Props {
-  deployment: Deployment | null
+  account: Address
   balances: Balances | null
+  onForget: () => void
 }
 
-export function AccountCard({ deployment, balances }: Props) {
+export function AccountCard({ account, balances, onForget }: Props) {
   return (
     <Card>
       <CardHeader>
         <CardTitle>Your quantum-safe account</CardTitle>
-        <CardDescription className="font-mono">{deployment ? short(deployment.account, 10) : "loading"}</CardDescription>
+        <CardDescription className="font-mono">{short(account, 10)}</CardDescription>
         <CardAction>
           <Badge variant="secondary">
             <AtomIcon data-icon="inline-start" />
@@ -33,7 +36,8 @@ export function AccountCard({ deployment, balances }: Props) {
         <div className="flex flex-col gap-2 text-sm text-muted-foreground">
           <p className="flex items-center gap-2">
             <ShieldCheckIcon className="text-foreground" />
-            No ECDSA key. Every transaction is authorized by a Falcon-512 signature checked onchain.
+            No ECDSA key. Every transaction is authorized by a Falcon-512 signature checked onchain. The key lives only in
+            this browser.
           </p>
           <p>
             Refundable stake in the ERC-8421 registry: {balances ? eth(balances.stake) : "…"}. Stake is what earns the
@@ -41,6 +45,11 @@ export function AccountCard({ deployment, balances }: Props) {
           </p>
         </div>
       </CardContent>
+      <CardFooter>
+        <Button variant="ghost" size="sm" onClick={onForget}>
+          Start over with a new key
+        </Button>
+      </CardFooter>
     </Card>
   )
 }

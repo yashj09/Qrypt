@@ -31,7 +31,7 @@ export function GatesPanel({ run }: { run: Run | null }) {
     <Card>
       <CardHeader>
         <CardTitle>Mempool gates</CardTitle>
-        <CardDescription>The same signed transaction goes to both mempools. Responses are live.</CardDescription>
+        <CardDescription>The same signed transaction goes to every mempool. Responses are live.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {!run ? (
@@ -45,9 +45,9 @@ export function GatesPanel({ run }: { run: Run | null }) {
               {run.scenario !== "send" && <Badge variant="destructive">{run.scenario === "tamper" ? "tampered signature" : "underpaid fee"}</Badge>}
             </div>
             <Gate title="Canonical mempool (EIP-8141, 100k cap)" verdict={run.canonical} />
-            <Gate title="Stock alt mempool (flat 100k cap)" verdict={run.stock} />
+            <Gate title="Hosted alt mempool (organisers' node)" verdict={run.stock} />
             <Gate title="Q-Pay alt mempool (ERC-8421 BUDGET-010)" verdict={run.alt} />
-            {run.alt?.accepted && (
+            {(run.alt?.accepted || run.stock?.accepted) && (
               <>
                 <Separator />
                 <div className="flex flex-wrap items-center gap-2">

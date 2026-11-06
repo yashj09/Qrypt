@@ -1,10 +1,11 @@
 {
   "chainId": 1337,
-  "verifier": "0xf8c8132cce778fc53f3b4739f633fcf1279a63bc",
-  "keyConverter": "0xe9acc68adc254f1786eac5db63f451f2a0e34c77",
-  "usdc": "0xd7bfba61aea43e6740e50b11e660e0e7bfa420d7",
-  "paymaster": "0x749604fc2e07826d1da037667f7a69592a7f56fe",
-  "account": "0x2b6fbc414ba0065061db0ede1ebfb1ab5011ae95",
+  "verifier": "0xd2cb7ed6f2c8704a7a6c3de4c9b63a3fa16ecbce",
+  "keyConverter": "0x7486030adae7864b26768aa1460a1b68e3a5d925",
+  "usdc": "0x13cb6782bb3b525418237cc4ea2d3e4a9ab25ab5",
+  "paymaster": "0x29381cda4aad43c0a3fb15569ec1d6e0568d9c81",
+  "factory": "0xb2b72cd6d4ca1fa566e477b87e4f346a0611c7f6",
+  "account": "0xB1538a36122FDe2DCe87EFaebb874f4662385C69",
   "usdcPerEth": "3000000000",
   "stakingRegistry": "0x9d74679fe08cf4bac98568c60cbd1134c1ed3b24"
 }

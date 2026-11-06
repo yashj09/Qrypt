@@ -8,7 +8,7 @@ export interface Endpoints {
   node: string;
   /** ERC-8421 sidecar JSON-RPC: the alternative mempool (`eth_sendFrameTransaction`). */
   altMempool: string;
-  /** An unpatched ERC-8421 sidecar (flat 100k validation cap), to show what BUDGET-010 changes. */
+  /** The organisers' hosted ERC-8421 sidecar, for comparison and as a fallback relay. */
   stockAltMempool?: string;
 }
 
@@ -66,8 +66,8 @@ export const simulate = (ep: Endpoints, tx: FrameTx) =>
 
 export type AltStatus = "New" | "Pending" | "Submitted" | "OnChain" | "Reverted" | string;
 
-export async function altStatus(ep: Endpoints, hash: Hex): Promise<AltStatus> {
-  const res = await rpc(ep.altMempool, "skandha_frameTransactionStatus", [hash]);
+export async function altStatus(ep: Endpoints, hash: Hex, url: string = ep.altMempool): Promise<AltStatus> {
+  const res = await rpc(url, "skandha_frameTransactionStatus", [hash]);
   return typeof res === "string" ? res : (res?.status ?? JSON.stringify(res));
 }
 

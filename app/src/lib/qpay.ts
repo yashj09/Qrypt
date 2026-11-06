@@ -15,22 +15,25 @@ import {
 } from "@qpay/frametx"
 import type { FrameTx } from "@forshtat/hegota-support/tx"
 
-/** Both RPCs go through the Vite dev server proxy (see vite.config.ts), so the browser never needs CORS. */
-const origin = typeof window === "undefined" ? "http://localhost" : window.location.origin
-export const endpoints: Endpoints = { node: `${origin}/rpc/node`, altMempool: `${origin}/rpc/alt`, stockAltMempool: `${origin}/rpc/stock` }
+/** All three RPCs allow any origin, so the browser calls them directly. Override at build time with VITE_*_RPC. */
+export const endpoints: Endpoints = {
+  node: import.meta.env.VITE_NODE_RPC ?? "https://altmempool.forshtat.com",
+  altMempool: import.meta.env.VITE_ALT_RPC ?? "http://127.0.0.1:14337/rpc/",
+  stockAltMempool: import.meta.env.VITE_STOCK_RPC ?? "https://altmempoolgateway.forshtat.com/rpc",
+}
 
 export interface Deployment {
   chainId: number
   verifier: Address
   usdc: Address
   paymaster: Address
-  account: Address
+  factory: Address
+  keyConverter: Address
   usdcPerEth: string
   stakingRegistry: Address
 }
 
 const deployments = import.meta.glob<Deployment>("../../../deployments/[0-9]*.json", { eager: true, import: "default" })
-const seeds = import.meta.glob<string>("../../../.qpay/falcon-seed.hex", { eager: true, query: "?raw", import: "default" })
 
 export const client = createPublicClient({ transport: http(endpoints.node) })
 
@@ -41,11 +44,54 @@ export async function loadDeployment(): Promise<Deployment> {
   return d
 }
 
-/** The demo account's Falcon key. Signing happens in this browser tab; the seed never goes over the network. */
-export function demoSigner() {
-  const seed = Object.values(seeds)[0]
-  if (!seed) throw new Error("No Falcon seed in .qpay/. Run pnpm setup.")
-  return falconFromSeed(hexToBytes(seed.trim() as Hex))
+const SEED_KEY = "qpay.falconSeed"
+const accountKey = (d: Deployment) => `qpay.account.${d.chainId}.${d.factory.toLowerCase()}`
+
+/** This browser's Falcon key, created on first visit. It never leaves the device; only the public key is sent. */
+export function browserSigner() {
+  let seed = localStorage.getItem(SEED_KEY) as Hex | null
+  if (!seed) {
+    seed = bytesToHex(crypto.getRandomValues(new Uint8Array(32)))
+    localStorage.setItem(SEED_KEY, seed)
+  }
+  return falconFromSeed(hexToBytes(seed))
+}
+
+export const storedAccount = (d: Deployment) => localStorage.getItem(accountKey(d)) as Address | null
+
+export function forgetAccount(d: Deployment) {
+  localStorage.removeItem(accountKey(d))
+  localStorage.removeItem(SEED_KEY)
+}
+
+const converterAbi = [
+  {
+    type: "function",
+    name: "toNttKey",
+    stateMutability: "pure",
+    inputs: [{ name: "coeffKey", type: "bytes" }],
+    outputs: [{ name: "", type: "bytes" }],
+  },
+] as const
+
+/** Converts this browser's Falcon key to the verifier's NTT form (free eth_call) and asks the onboarding service for an account. */
+export async function createAccount(d: Deployment): Promise<Address> {
+  const signer = browserSigner()
+  const pubkey = await client.readContract({
+    address: d.keyConverter,
+    abi: converterAbi,
+    functionName: "toNttKey",
+    args: [bytesToHex(signer.publicKeyCoeffs)],
+  })
+  const res = await fetch("/api/onboard", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ pubkey, factory: d.factory }),
+  })
+  const body = (await res.json().catch(() => ({}))) as { account?: Address; error?: string }
+  if (!res.ok || !body.account) throw new Error(body.error ?? `onboarding failed (${res.status})`)
+  localStorage.setItem(accountKey(d), body.account)
+  return body.account
 }
 
 export interface Balances {
@@ -69,7 +115,7 @@ const registryAbi = [
   },
 ] as const
 
-export async function readBalances(d: Deployment, who: Address = d.account): Promise<Balances> {
+export async function readBalances(d: Deployment, who: Address): Promise<Balances> {
   const [eth, usdc, deposit, nonce] = await Promise.all([
     client.getBalance({ address: who }),
     client.readContract({ address: d.usdc, abi: erc20Abi, functionName: "balanceOf", args: [who] }),
@@ -91,11 +137,11 @@ export interface Prepared {
   signMs: number
 }
 
-export async function prepare(d: Deployment, recipient: Address, amount: bigint, scenario: Scenario): Promise<Prepared> {
-  const nonceSeq = BigInt(await client.getTransactionCount({ address: d.account }))
+export async function prepare(d: Deployment, account: Address, recipient: Address, amount: bigint, scenario: Scenario): Promise<Prepared> {
+  const nonceSeq = BigInt(await client.getTransactionCount({ address: account }))
   const quoted = buildQPayTx({
     chainId: BigInt(d.chainId),
-    account: d.account,
+    account,
     paymaster: d.paymaster,
     usdc: d.usdc,
     recipient,
@@ -109,7 +155,7 @@ export async function prepare(d: Deployment, recipient: Address, amount: bigint,
     scenario === "underpay"
       ? buildQPayTx({
           chainId: BigInt(d.chainId),
-          account: d.account,
+          account,
           paymaster: d.paymaster,
           usdc: d.usdc,
           recipient,
@@ -121,7 +167,7 @@ export async function prepare(d: Deployment, recipient: Address, amount: bigint,
           feeOverride: quoted.fee / 10n,
         })
       : quoted
-  const signer = demoSigner()
+  const signer = browserSigner()
   const started = performance.now()
   let signed = await signQPay(tx, (digest) => signer.sign(digest))
   const signMs = performance.now() - started
@@ -136,7 +182,8 @@ export async function prepare(d: Deployment, recipient: Address, amount: bigint,
 export const toCanonical = (p: Prepared): Promise<Verdict> => submitCanonical(endpoints, p.tx)
 export const toStock = (p: Prepared): Promise<Verdict> => submitStock(endpoints, p.tx)
 export const toAlt = (p: Prepared): Promise<Verdict> => submitAlt(endpoints, p.tx)
-export const statusOf = (hash: Hex) => altStatus(endpoints, hash)
+export const statusOf = (hash: Hex, via: "alt" | "stock" = "alt") =>
+  altStatus(endpoints, hash, via === "stock" ? endpoints.stockAltMempool : endpoints.altMempool)
 
 export interface Inclusion {
   block: bigint

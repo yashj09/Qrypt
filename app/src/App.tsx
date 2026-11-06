@@ -7,8 +7,12 @@ import { AccountCard } from "@/components/account-card"
 import { SendCard } from "@/components/send-card"
 import { GatesPanel, type Run } from "@/components/gates-panel"
 import { FramesCard } from "@/components/frames-card"
+import { OnboardCard } from "@/components/onboard-card"
 import {
   client,
+  createAccount,
+  forgetAccount,
+  storedAccount,
   inclusion,
   loadDeployment,
   prepare,
@@ -29,35 +33,59 @@ export function App() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<Scenario | null>(null)
   const [run, setRun] = useState<Run | null>(null)
+  const [account, setAccount] = useState<Address | null>(null)
+  const [onboarding, setOnboarding] = useState(false)
 
-  const refresh = useCallback(async (d: Deployment) => setBalances(await readBalances(d)), [])
+  const refresh = useCallback(async (d: Deployment, a: Address) => setBalances(await readBalances(d, a)), [])
 
   useEffect(() => {
     loadDeployment()
       .then((d) => {
         setDeployment(d)
-        return refresh(d)
+        setAccount(storedAccount(d))
       })
       .catch((e) => setError(String(e?.message ?? e)))
-  }, [refresh])
+  }, [])
 
   useEffect(() => {
-    if (!deployment) return
-    const id = setInterval(() => refresh(deployment).catch(() => {}), 4000)
+    if (!deployment || !account) return
+    refresh(deployment, account).catch(() => {})
+    const id = setInterval(() => refresh(deployment, account).catch(() => {}), 4000)
     return () => clearInterval(id)
-  }, [deployment, refresh])
+  }, [deployment, account, refresh])
+
+  const onCreate = async () => {
+    if (!deployment) return
+    setOnboarding(true)
+    setError(null)
+    try {
+      setAccount(await createAccount(deployment))
+    } catch (e) {
+      setError(String((e as Error)?.message ?? e))
+    } finally {
+      setOnboarding(false)
+    }
+  }
+
+  const onForget = () => {
+    if (!deployment) return
+    forgetAccount(deployment)
+    setAccount(null)
+    setBalances(null)
+    setRun(null)
+  }
 
   const onRun = async (scenario: Scenario, recipient: Address, amount: bigint) => {
-    if (!deployment) return
+    if (!deployment || !account) return
     setBusy(scenario)
     setError(null)
     try {
       const before = {
         recipient: await usdcBalance(deployment, recipient),
         paymaster: await usdcBalance(deployment, deployment.paymaster),
-        senderEth: await client.getBalance({ address: deployment.account }),
+        senderEth: await client.getBalance({ address: account }),
       }
-      const p = await prepare(deployment, recipient, amount, scenario)
+      const p = await prepare(deployment, account, recipient, amount, scenario)
       let current: Run = { scenario, hash: p.hash, fee: p.fee, signMs: p.signMs }
       setRun(current)
       const canonical = await toCanonical(p)
@@ -69,9 +97,10 @@ export function App() {
       const alt = await toAlt(p)
       current = { ...current, alt }
       setRun(current)
-      if (alt.accepted) {
+      const via = alt.accepted ? "alt" : stock.accepted ? "stock" : null
+      if (via) {
         for (let i = 0; i < 60; i++) {
-          const status = await statusOf(alt.hash).catch(() => current.status)
+          const status = await statusOf(p.hash, via).catch(() => current.status)
           current = { ...current, status }
           setRun(current)
           if (status === "OnChain" || status === "Reverted") break
@@ -83,14 +112,14 @@ export function App() {
             delta: {
               recipient: (await usdcBalance(deployment, recipient)) - before.recipient,
               paymaster: (await usdcBalance(deployment, deployment.paymaster)) - before.paymaster,
-              senderEth: (await client.getBalance({ address: deployment.account })) - before.senderEth,
+              senderEth: (await client.getBalance({ address: account })) - before.senderEth,
             },
-            included: await inclusion(alt.hash).catch(() => undefined),
+            included: await inclusion(p.hash).catch(() => undefined),
           }
           setRun(current)
         }
       }
-      await refresh(deployment)
+      await refresh(deployment, account)
     } catch (e) {
       setError(String((e as Error)?.message ?? e))
     } finally {
@@ -122,8 +151,14 @@ export function App() {
       )}
       <main className="grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
         <div className="flex flex-col gap-6">
-          <AccountCard deployment={deployment} balances={balances} />
-          <SendCard busy={busy} disabled={!deployment} onRun={onRun} />
+          {account ? (
+            <>
+              <AccountCard account={account} balances={balances} onForget={onForget} />
+              <SendCard busy={busy} disabled={!deployment} onRun={onRun} />
+            </>
+          ) : (
+            <OnboardCard busy={onboarding} disabled={!deployment} onCreate={onCreate} />
+          )}
         </div>
         <div className="flex flex-col gap-6">
           <GatesPanel run={run} />

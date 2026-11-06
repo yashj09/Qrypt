@@ -25,6 +25,7 @@ export interface Deployment {
   keyConverter: Address;
   usdc: Address;
   paymaster: Address;
+  factory: Address;
   account: Address;
   usdcPerEth: string;
   stakingRegistry: Address;
