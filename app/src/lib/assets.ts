@@ -132,3 +132,10 @@ export async function readWallet(d: Deployment, account: Address, assets: Asset[
   ])
   return { balances, holdings, transfers }
 }
+
+/** The asset a payment request names, by symbol or token address; USDC when it names none or one we don't hold. */
+export function resolveAsset(assets: Asset[], wanted?: string): Asset {
+  if (!wanted) return assets[0]
+  const w = wanted.toLowerCase()
+  return assets.find((a) => assetSymbol(a).toLowerCase() === w || (a.kind === "erc20" && a.address.toLowerCase() === w)) ?? assets[0]
+}

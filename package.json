@@ -12,7 +12,9 @@
     "pack:extension": "sh scripts/pack-extension.sh",
     "test:extension": "tsx scripts/e2e-extension.ts",
     "test:web": "tsx scripts/e2e-web.ts",
-    "test:passkey": "tsx scripts/e2e-passkey.ts"
+    "test:passkey": "tsx scripts/e2e-passkey.ts",
+    "test:pay-request": "tsx scripts/check-payment-request.ts",
+    "test:mobile": "tsx scripts/e2e-mobile.ts"
   },
   "dependencies": {
     "@forshtat/hegota-support": "0.0.1",
@@ -24,6 +26,8 @@
     "viem": "^2.57.16"
   },
   "devDependencies": {
-    "playwright": "^1.64.1"
+    "@types/qrcode": "^1.5.6",
+    "playwright": "^1.64.1",
+    "qrcode": "^1.5.4"
   }
 }

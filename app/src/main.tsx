@@ -12,6 +12,7 @@ setKeyStore(webVault.keyStore)
 /** Every route but the landing page is lazy, so the landing page ships no viem or Falcon code. */
 const ROUTES: Record<string, React.LazyExoticComponent<React.ComponentType>> = {
   "/app": lazy(() => import("@/routes/app")),
+  "/pay": lazy(() => import("@/routes/app")),
   "/connect": lazy(() => import("@/routes/connect-web")),
   "/dapp": lazy(() => import("@/routes/dapp")),
 }

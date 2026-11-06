@@ -1,0 +1,219 @@
+import { useState, type ReactNode } from "react"
+import {
+  ArrowDownToLineIcon,
+  ArrowLeftIcon,
+  ArrowUpFromLineIcon,
+  CpuIcon,
+  EyeIcon,
+  EyeOffIcon,
+  LockIcon,
+  ScanLineIcon,
+  SettingsIcon,
+  ShareIcon,
+  SquarePlusIcon,
+} from "lucide-react"
+import type { Address } from "viem"
+import { LogoMark } from "@/components/brand/logo"
+import { Inspector } from "@/components/inspector/inspector"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Item, ItemContent, ItemDescription, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item"
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Activity } from "@/components/wallet/activity"
+import type { Wallet } from "@/hooks/use-wallet"
+import { isIos, isStandalone } from "@/hooks/use-media-query"
+import { assetDecimals, assetKey, assetSymbol } from "@/lib/assets"
+import { dollars, short, units } from "@/lib/format"
+import type { PaymentRequest } from "@/lib/payment-request"
+import { ReceiveScreen } from "./receive-screen"
+import { ScanScreen } from "./scan-screen"
+import { SendFlow } from "./send-flow"
+
+type Screen = { kind: "home" } | { kind: "send"; request?: PaymentRequest } | { kind: "receive" } | { kind: "scan" } | { kind: "activity" } | { kind: "settings" }
+
+const HIDE_KEY = "qrypt.hideBalances"
+
+interface Props {
+  w: Wallet
+  account: Address
+  /** Opened from a pay link: start on the pay screen. */
+  request?: PaymentRequest
+  onLock: () => void
+  /** The settings body (unlock methods, recovery, key actions); shared with the desktop layout. */
+  settings: ReactNode
+}
+
+/** The phone wallet: one thumb-reachable home, and full-screen steps for send, receive and scan. */
+export function MobileWallet({ w, account, request, onLock, settings }: Props) {
+  const { assets, wallet, activity, names, run, tab, setTab, busy, deployment, error, notice, actions } = w
+  const [screen, setScreen] = useState<Screen>(request ? { kind: "send", request } : { kind: "home" })
+  const [hidden, setHidden] = useState(() => localStorage.getItem(HIDE_KEY) === "1")
+  const [hoodOpen, setHoodOpen] = useState(false)
+  const [installOpen, setInstallOpen] = useState(false)
+  const toggleHidden = () => {
+    localStorage.setItem(HIDE_KEY, hidden ? "0" : "1")
+    setHidden(!hidden)
+  }
+  const usdc = wallet?.holdings[assetKey(assets[0])]
+  const mask = (s: string) => (hidden ? "••••" : s)
+  const home = () => setScreen({ kind: "home" })
+
+  const titled = (title: string, body: ReactNode) => (
+    <div className="flex min-h-svh flex-col gap-4 bg-background p-4 pb-10">
+      <header className="flex items-center gap-2">
+        <Button variant="ghost" size="icon" aria-label="Back" onClick={home}>
+          <ArrowLeftIcon />
+        </Button>
+        <h1 className="text-lg font-semibold">{title}</h1>
+      </header>
+      {body}
+    </div>
+  )
+
+  if (screen.kind === "send")
+    return titled(
+      screen.request ? "Pay" : "Send",
+      <SendFlow w={w} request={screen.request} onScan={() => setScreen({ kind: "scan" })} onDone={home} />,
+    )
+  if (screen.kind === "receive") return titled("Receive", <ReceiveScreen account={account} assets={assets} />)
+  if (screen.kind === "scan") return titled("Scan to pay", <ScanScreen onResult={(req) => setScreen({ kind: "send", request: req })} />)
+  if (screen.kind === "activity") return titled("Activity", <Activity local={activity} transfers={wallet?.transfers ?? null} names={names} />)
+  if (screen.kind === "settings")
+    return titled(
+      "Settings",
+      <div className="flex flex-col gap-4">
+        {isIos() && !isStandalone() && (
+          <Button variant="outline" onClick={() => setInstallOpen(true)}>
+            <SquarePlusIcon data-icon="inline-start" />
+            Add Qrypt to your Home Screen
+          </Button>
+        )}
+        {settings}
+        <Button variant="outline" onClick={onLock}>
+          <LockIcon data-icon="inline-start" />
+          Lock Qrypt
+        </Button>
+        <InstallGuide open={installOpen} onOpenChange={setInstallOpen} />
+      </div>,
+    )
+
+  return (
+    <div className="flex min-h-svh flex-col gap-6 bg-background p-4 pb-10">
+      <header className="flex items-center justify-between">
+        <Button variant="outline" className="h-11 rounded-full px-3" onClick={() => setScreen({ kind: "receive" })}>
+          <LogoMark className="size-5" />
+          <span className="font-mono text-sm">{short(account, 4)}</span>
+        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="icon-lg" className="rounded-full" aria-label={hidden ? "Show balances" : "Hide balances"} onClick={toggleHidden}>
+            {hidden ? <EyeOffIcon /> : <EyeIcon />}
+          </Button>
+          <Button variant="outline" size="icon-lg" className="rounded-full" aria-label="Settings" onClick={() => setScreen({ kind: "settings" })}>
+            <SettingsIcon />
+          </Button>
+        </div>
+      </header>
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription className="line-clamp-3 break-all">{error}</AlertDescription>
+        </Alert>
+      )}
+      {notice && (
+        <Alert>
+          <AlertDescription>{notice}</AlertDescription>
+        </Alert>
+      )}
+
+      <section className="flex flex-col items-center gap-2 py-6 text-center">
+        {usdc !== undefined ? (
+          <span className="text-6xl font-semibold tracking-tight tabular-nums">${mask(dollars(usdc))}</span>
+        ) : (
+          <Skeleton className="h-16 w-48" />
+        )}
+        <span className="text-sm text-muted-foreground">USDC · 0 ETH needed for gas</span>
+        <div className="flex flex-wrap justify-center gap-2 pt-1">
+          {assets.slice(1).map((a) => (
+            <Badge key={assetKey(a)} variant="outline" className="font-mono">
+              {mask(units(wallet?.holdings[assetKey(a)] ?? 0n, assetDecimals(a)))} {assetSymbol(a)}
+            </Badge>
+          ))}
+        </div>
+      </section>
+
+      <div className="grid grid-cols-3 gap-3">
+        <Tile icon={<ArrowDownToLineIcon />} label="Receive" onClick={() => setScreen({ kind: "receive" })} />
+        <Tile icon={<ArrowUpFromLineIcon />} label="Send" onClick={() => setScreen({ kind: "send" })} />
+        <Tile icon={<ScanLineIcon />} label="Scan" onClick={() => setScreen({ kind: "scan" })} />
+      </div>
+
+      <Button variant="ghost" className="self-center rounded-full" onClick={() => setHoodOpen(true)} disabled={!deployment}>
+        <CpuIcon data-icon="inline-start" />
+        Under the hood
+      </Button>
+
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Activity</h2>
+        <Button variant="ghost" size="sm" onClick={() => setScreen({ kind: "activity" })}>
+          View all
+        </Button>
+      </div>
+      <Activity bare local={activity.slice(0, 3)} transfers={(wallet?.transfers ?? []).slice(0, 4)} names={names} />
+
+      <Sheet open={hoodOpen} onOpenChange={setHoodOpen}>
+        <SheetContent side="bottom" className="dark max-h-[85svh] overflow-y-auto bg-lattice p-6">
+          <SheetHeader className="sr-only">
+            <SheetTitle>Under the hood</SheetTitle>
+            <SheetDescription>Mempool verdicts and frames for your last transaction.</SheetDescription>
+          </SheetHeader>
+          <Inspector run={run} tab={tab} onTab={setTab} busy={busy} canRun={!!deployment} onStress={actions.stress} />
+        </SheetContent>
+      </Sheet>
+    </div>
+  )
+}
+
+function Tile({ icon, label, onClick }: { icon: ReactNode; label: string; onClick: () => void }) {
+  return (
+    <Button variant="outline" className="h-24 flex-col gap-2 rounded-2xl text-base [&_svg]:size-6 [&_svg]:text-success" onClick={onClick}>
+      {icon}
+      {label}
+    </Button>
+  )
+}
+
+/** iOS has no install prompt, so we show the two taps. Push notifications only work once installed. */
+export function InstallGuide({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="bottom" className="p-6">
+        <SheetHeader>
+          <SheetTitle>Add Qrypt to your Home Screen</SheetTitle>
+          <SheetDescription>It opens full screen like an app, and it's needed for payment notifications on iPhone.</SheetDescription>
+        </SheetHeader>
+        <ItemGroup className="gap-2">
+          <Item variant="muted" size="sm">
+            <ItemMedia variant="icon">
+              <ShareIcon />
+            </ItemMedia>
+            <ItemContent>
+              <ItemTitle>1. Tap Share</ItemTitle>
+              <ItemDescription>The square with an arrow in Safari's toolbar.</ItemDescription>
+            </ItemContent>
+          </Item>
+          <Item variant="muted" size="sm">
+            <ItemMedia variant="icon">
+              <SquarePlusIcon />
+            </ItemMedia>
+            <ItemContent>
+              <ItemTitle>2. Tap "Add to Home Screen"</ItemTitle>
+              <ItemDescription>Then open Qrypt from its icon. Face ID recovers your account there in one tap.</ItemDescription>
+            </ItemContent>
+          </Item>
+        </ItemGroup>
+      </SheetContent>
+    </Sheet>
+  )
+}

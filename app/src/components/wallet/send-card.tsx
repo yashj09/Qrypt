@@ -20,10 +20,14 @@ import { Separator } from "@/components/ui/separator"
 import { Spinner } from "@/components/ui/spinner"
 import { assetDecimals, assetKey, assetSymbol, type Asset, type Holdings } from "@/lib/assets"
 import { short, units, usdcAmount } from "@/lib/format"
+import type { PaymentRequest } from "@/lib/payment-request"
+import { resolveAsset } from "@/lib/assets"
 
 const DEFAULT_RECIPIENT = "0x000000000000000000000000000000000000dEaD"
 
 interface Props {
+  /** Pre-filled from a pay link. */
+  initial?: PaymentRequest
   assets: Asset[]
   holdings: Holdings | null
   fee: bigint | null
@@ -40,10 +44,10 @@ function toBaseUnits(s: string, decimals: number): bigint {
   return BigInt(m[1] || "0") * 10n ** BigInt(decimals) + BigInt(frac || "0")
 }
 
-export function SendCard({ assets, holdings, fee, sending, disabled, onSend }: Props) {
-  const [assetId, setAssetId] = useState(assetKey(assets[0]))
-  const [recipient, setRecipient] = useState(DEFAULT_RECIPIENT)
-  const [amount, setAmount] = useState("5")
+export function SendCard({ initial, assets, holdings, fee, sending, disabled, onSend }: Props) {
+  const [assetId, setAssetId] = useState(assetKey(resolveAsset(assets, initial?.asset)))
+  const [recipient, setRecipient] = useState<string>(initial?.to ?? DEFAULT_RECIPIENT)
+  const [amount, setAmount] = useState(initial?.amount ?? "5")
   const [reviewing, setReviewing] = useState(false)
   const asset = assets.find((a) => assetKey(a) === assetId) ?? assets[0]
   const usdcId = assetKey(assets[0])

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { AlertCircleIcon, InfoIcon, PanelRightOpenIcon } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -15,6 +15,9 @@ import { SendCard } from "@/components/wallet/send-card"
 import { TopBar } from "@/components/wallet/top-bar"
 import { TransferStatus } from "@/components/wallet/transfer-status"
 import { useWallet } from "@/hooks/use-wallet"
+import { useMediaQuery } from "@/hooks/use-media-query"
+import { MobileWallet } from "@/components/mobile/mobile-wallet"
+import { parsePaymentRequest } from "@/lib/payment-request"
 import { useVaultState } from "@/components/vault/use-vault"
 import { WebVaultGate } from "@/components/vault/web-vault-gate"
 import { UnlockMethodsCard } from "@/components/vault/unlock-methods-card"
@@ -28,6 +31,11 @@ import { RecoveryStatus } from "@/components/vault/recovery-status"
 import { cn } from "@/lib/utils"
 
 export default function AppPage() {
+  const phone = useMediaQuery("(max-width: 767px)")
+  // Phones get the dark wallet (like the extension); desktop keeps the light one with the dark inspector.
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", phone)
+  }, [phone])
   return (
     <WebVaultGate>
       <WalletPage />
@@ -43,6 +51,8 @@ function WalletPage() {
   const [restoreOpen, setRestoreOpen] = useState(false)
   const [inspectorOpen, setInspectorOpen] = useState(true)
   const vaultState = useVaultState(webVault)
+  const phone = useMediaQuery("(max-width: 767px)")
+  const [payRequest] = useState(() => (window.location.pathname.replace(/\/+$/, "") === "/pay" ? parsePaymentRequest(window.location.href) ?? undefined : undefined))
   const needsVault = vaultState === "none"
 
   const create = async (protection?: Protection) => {
@@ -90,6 +100,21 @@ function WalletPage() {
     await webVault.keyStore.save(seed)
     storeAccount(deployment, restored)
     actions.reload()
+  }
+
+  const settings = account && (
+    <>
+      <UnlockMethodsCard
+        vault={webVault}
+        onPasskeyAdded={async (key) => account && uploadRecovery(account, key, (await webVault.keyStore.seed())!)}
+        footer={<RecoveryStatus account={account} />}
+      />
+      <KeyCard busy={busy !== null} onBackup={actions.backup} onRotate={rotate} onClose={actions.close} onForget={actions.forget} />
+    </>
+  )
+
+  if (phone && account) {
+    return <MobileWallet w={w} account={account} request={payRequest} onLock={() => void webVault.lock()} settings={settings} />
   }
 
   const inspector = (
@@ -150,6 +175,7 @@ function WalletPage() {
                   onAddToken={() => setAddTokenOpen(true)}
                 />
                 <SendCard
+                  initial={payRequest}
                   assets={assets}
                   holdings={wallet?.holdings ?? null}
                   fee={fee}
@@ -159,18 +185,7 @@ function WalletPage() {
                 />
                 {run && <TransferStatus run={run} />}
                 <Activity local={activity} transfers={wallet?.transfers ?? null} names={names} />
-                <UnlockMethodsCard
-                  vault={webVault}
-                  onPasskeyAdded={async (key) => account && uploadRecovery(account, key, (await webVault.keyStore.seed())!)}
-                  footer={<RecoveryStatus account={account} />}
-                />
-                <KeyCard
-                  busy={busy !== null}
-                  onBackup={actions.backup}
-                  onRotate={rotate}
-                  onClose={actions.close}
-                  onForget={actions.forget}
-                />
+                {settings}
                 {deployment && (
                   <>
                     <ReceiveDialog

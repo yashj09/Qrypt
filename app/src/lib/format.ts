@@ -14,3 +14,5 @@ export const ago = (at: number) => {
 }
 export const units = (v: bigint, decimals: number) =>
   Number(formatUnits(v, decimals)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: decimals > 6 ? 6 : 4 })
+export const dollars = (v: bigint) =>
+  Number(formatUnits(v, 6)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
