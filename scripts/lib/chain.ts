@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   createPublicClient,
@@ -10,8 +10,20 @@ import {
   type Hex,
   type PublicClient,
 } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import { ROOT, endpoints, deployerKey } from "./config.ts";
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
+import { parseEther } from "viem";
+import { ROOT, STATE_DIR, endpoints, sharedFunderKey } from "./config.ts";
+
+/** Our own deployer key in `.qpay/`, so we never race other teams on the shared genesis key's nonce. */
+function deployerKey(): Hex {
+  if (process.env.QPAY_DEPLOYER_KEY) return process.env.QPAY_DEPLOYER_KEY as Hex;
+  mkdirSync(STATE_DIR, { recursive: true });
+  const path = resolve(STATE_DIR, "deployer.hex");
+  if (!existsSync(path)) writeFileSync(path, generatePrivateKey());
+  return readFileSync(path, "utf8").trim() as Hex;
+}
+
+const DEPLOYER_FLOAT = parseEther("20");
 
 export async function connect() {
   const probe = createPublicClient({ transport: http(endpoints.node) });
@@ -22,9 +34,14 @@ export async function connect() {
     nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
     rpcUrls: { default: { http: [endpoints.node] } },
   });
-  const account = privateKeyToAccount(deployerKey);
+  const account = privateKeyToAccount(deployerKey());
   const publicClient = createPublicClient({ chain, transport: http(endpoints.node) }) as PublicClient;
   const wallet = createWalletClient({ chain, account, transport: http(endpoints.node) });
+  if ((await publicClient.getBalance({ address: account.address })) < DEPLOYER_FLOAT / 2n) {
+    const funder = createWalletClient({ chain, account: privateKeyToAccount(sharedFunderKey), transport: http(endpoints.node) });
+    const hash = await funder.sendTransaction({ to: account.address, value: DEPLOYER_FLOAT, gas: 250_000n });
+    await publicClient.waitForTransactionReceipt({ hash });
+  }
   return { chain, publicClient, wallet, deployer: account };
 }
 

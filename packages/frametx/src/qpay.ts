@@ -18,8 +18,8 @@ export interface GasLimits {
 }
 
 export const defaultGas: GasLimits = {
-  falconVerify: 4_500_000n,
-  paymasterVerify: 120_000n,
+  falconVerify: 950_000n,
+  paymasterVerify: 100_000n,
   repay: 60_000n,
   repayState: 50_000n,
   payment: 60_000n,

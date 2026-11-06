@@ -1,0 +1,137 @@
+diff --git a/bun.lock b/bun.lock
+index e94bd8b..7082ee7 100644
+--- a/bun.lock
++++ b/bun.lock
+@@ -1,5 +1,6 @@
+ {
+   "lockfileVersion": 1,
++  "configVersion": 0,
+   "workspaces": {
+     "": {
+       "name": "root",
+diff --git a/packages/executor/src/services/UserOpValidation/utils/validationPrefix.ts b/packages/executor/src/services/UserOpValidation/utils/validationPrefix.ts
+index 8a34f88..d0f20ff 100644
+--- a/packages/executor/src/services/UserOpValidation/utils/validationPrefix.ts
++++ b/packages/executor/src/services/UserOpValidation/utils/validationPrefix.ts
+@@ -9,6 +9,21 @@ import { getAddress } from "viem";
+  */
+ export const MAX_VERIFY_GAS = BigInt(100_000);
+ 
++/**
++ * ERC-8421 BUDGET-010: validation gas is budgeted per entity (sender, payer,
++ * factory) instead of one flat cap over the whole prefix. An unstaked entity
++ * gets MAX_VERIFY_GAS_PER_ENTITY; a staked one gets
++ * MAX_VERIFY_GAS_STAKED_ENTITY. This is what lets an expensive but legitimate
++ * check, such as a post-quantum signature verified in a VERIFY frame, into
++ * the alternative mempool while the canonical mempool keeps its 100k cap.
++ * The staked ceiling is configurable through
++ * SKANDHA_MAX_VERIFY_GAS_STAKED_ENTITY.
++ */
++export const MAX_VERIFY_GAS_PER_ENTITY = BigInt(100_000);
++export const MAX_VERIFY_GAS_STAKED_ENTITY = BigInt(
++  process.env.SKANDHA_MAX_VERIFY_GAS_STAKED_ENTITY ?? 1_000_000
++);
++
+ /**
+  * EIP-8141's intrinsic cost per signature, by scheme - not stated in
+  * erc-7562.md (that spec states the rule, FRA-040, that this cost counts
+@@ -216,7 +231,9 @@ export function recognizeValidationPrefix(
+   return null;
+ }
+ 
+-export type StructuralRulesResult = { valid: true } | { valid: false; reason: string };
++export type StructuralRulesResult =
++  | { valid: true; entityVerifyGas: Map<string, bigint> }
++  | { valid: false; reason: string };
+ 
+ /**
+  * Implements the remaining EIP-8141 §Structural Rules items not already
+@@ -256,6 +273,9 @@ export function validateStructuralRules(tx: FrameTransaction, prefix: Validation
+   // frame skipped by recognizeValidationPrefix (see rationale above).
+   let executionSum = BigInt(0);
+   let stateSum = BigInt(0);
++  // BUDGET-010: execution gas of the prefix, grouped by the entity each frame
++  // runs as. A null target is tx.sender.
++  const entityVerifyGas = new Map<string, bigint>();
+   for (let i = 0; i <= lastPrefixIndex; i++) {
+     const frame = tx.frames[i];
+ 
+@@ -277,19 +297,27 @@ export function validateStructuralRules(tx: FrameTransaction, prefix: Validation
+ 
+     executionSum += frame.limits.execution;
+     stateSum += frame.limits.state;
++    const entity = (frame.target ?? tx.sender).toLowerCase();
++    entityVerifyGas.set(entity, (entityVerifyGas.get(entity) ?? BigInt(0)) + frame.limits.execution);
+   }
+ 
+   // Item 6 (FRA-040): the sum of the validation prefix's `limits.execution`,
+   // PLUS the intrinsic cost of validating tx.signatures, MUST NOT exceed
+   // MAX_VERIFY_GAS - see SIGNATURE_VERIFICATION_GAS_COST for where that
+   // per-scheme cost comes from.
++  // Signature verification is attributed to the sender. Each entity is held
++  // to the staked ceiling here; the unstaked budget needs stake info and is
++  // enforced in FrameTxValidationService.validate.
+   const sigCost = signatureVerificationCost(tx);
+-  const totalVerifyGas = executionSum + sigCost;
+-  if (totalVerifyGas > MAX_VERIFY_GAS) {
+-    return {
+-      valid: false,
+-      reason: `validation prefix execution gas sum ${executionSum} + signature-verification cost ${sigCost} = ${totalVerifyGas} exceeds MAX_VERIFY_GAS ${MAX_VERIFY_GAS}`,
+-    };
++  const senderKey = tx.sender.toLowerCase();
++  entityVerifyGas.set(senderKey, (entityVerifyGas.get(senderKey) ?? BigInt(0)) + sigCost);
++  for (const [entity, gas] of entityVerifyGas) {
++    if (gas > MAX_VERIFY_GAS_STAKED_ENTITY) {
++      return {
++        valid: false,
++        reason: `BUDGET-010: entity ${entity} validation gas ${gas} exceeds MAX_VERIFY_GAS_STAKED_ENTITY ${MAX_VERIFY_GAS_STAKED_ENTITY}`,
++      };
++    }
+   }
+   if (stateSum > MAX_VERIFY_STATE_GAS) {
+     return {
+@@ -310,5 +338,5 @@ export function validateStructuralRules(tx: FrameTransaction, prefix: Validation
+     }
+   }
+ 
+-  return { valid: true };
++  return { valid: true, entityVerifyGas };
+ }
+diff --git a/packages/executor/src/services/UserOpValidation/validators/frameTx.ts b/packages/executor/src/services/UserOpValidation/validators/frameTx.ts
+index ce5ef15..89c3e0c 100644
+--- a/packages/executor/src/services/UserOpValidation/validators/frameTx.ts
++++ b/packages/executor/src/services/UserOpValidation/validators/frameTx.ts
+@@ -40,6 +40,8 @@ import {
+   recognizeValidationPrefix,
+   validateStructuralRules,
+   ValidationPrefixMatch,
++  MAX_VERIFY_GAS_PER_ENTITY,
++  MAX_VERIFY_GAS_STAKED_ENTITY,
+ } from "../utils/validationPrefix.js";
+ import { NetworkConfig, StakeInfo } from "../../../interfaces.js";
+ import {
+@@ -314,6 +316,24 @@ export class FrameTxValidationService {
+         new RpcError(structural.reason, RpcErrorCodes.INVALID_USEROP)
+       );
+     }
++    // BUDGET-010: an entity above the unstaked budget must be staked.
++    const budgetStakes = await this.resolveRoleStakes(tx, prefix);
++    for (const [role, info] of Object.entries(budgetStakes)) {
++      if (!info) continue;
++      const gas = structural.entityVerifyGas.get(info.addr.toLowerCase()) ?? BigInt(0);
++      if (gas <= MAX_VERIFY_GAS_PER_ENTITY) continue;
++      const staked =
++        BigInt(info.stake) >= this.networkConfig.minStake && BigInt(info.withdrawTime) === BigInt(0);
++      if (!staked) {
++        throw collector.failed(
++          EXPLORER_RULES.STRUCTURE,
++          new RpcError(
++            `BUDGET-010: unstaked ${role} ${info.addr} validation gas ${gas} exceeds MAX_VERIFY_GAS_PER_ENTITY ${MAX_VERIFY_GAS_PER_ENTITY}; stake the ${role} for up to ${MAX_VERIFY_GAS_STAKED_ENTITY}`,
++            RpcErrorCodes.INVALID_USEROP
++          )
++        );
++      }
++    }
+     collector.pass(EXPLORER_RULES.STRUCTURE);
+ 
+     // The validation prefix's last real frame index (recognizeValidationPrefix

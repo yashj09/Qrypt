@@ -12,8 +12,8 @@ export const endpoints: Endpoints = {
   altMempool: process.env.QPAY_ALT_RPC ?? "http://127.0.0.1:14337/rpc/",
 };
 
-/** Throwaway devnet key funded in the Kurtosis genesis (published on purpose in the sidecar repo). */
-export const deployerKey = (process.env.QPAY_DEPLOYER_KEY ??
+/** Devnet genesis key, published on purpose in the sidecar repo and shared by everyone; only used to fund ours. */
+export const sharedFunderKey = (process.env.QPAY_FUNDER_KEY ??
   "0x06f911c1ecb2053bb443ba0a0e28d630c583c3c0c2f334a9ecdc8c7c6ad4ea15") as Hex;
 
 export const STAKING_REGISTRY = (process.env.QPAY_STAKING_REGISTRY ?? "") as Address | "";

@@ -1,0 +1,10 @@
+{
+  "chainId": 1337,
+  "verifier": "0xf8c8132cce778fc53f3b4739f633fcf1279a63bc",
+  "keyConverter": "0xe9acc68adc254f1786eac5db63f451f2a0e34c77",
+  "usdc": "0xd7bfba61aea43e6740e50b11e660e0e7bfa420d7",
+  "paymaster": "0x749604fc2e07826d1da037667f7a69592a7f56fe",
+  "account": "0x2b6fbc414ba0065061db0ede1ebfb1ab5011ae95",
+  "usdcPerEth": "3000000000",
+  "stakingRegistry": "0x9d74679fe08cf4bac98568c60cbd1134c1ed3b24"
+}
