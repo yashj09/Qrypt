@@ -1,0 +1,88 @@
+import type { Address, Hex } from "viem"
+import type { Verdict } from "@qpay/frametx"
+import type { Inclusion, Scenario } from "@/lib/qpay"
+
+export type MempoolKey = "canonical" | "stock" | "alt"
+
+export const MEMPOOLS: { key: MempoolKey; name: string; rule: string }[] = [
+  { key: "canonical", name: "Canonical mempool", rule: "EIP-8141 defaults · 100k VERIFY cap" },
+  { key: "stock", name: "Hosted alt mempool", rule: "Organisers' ERC-8421 node · limits lifted" },
+  { key: "alt", name: "Eyrie alt mempool", rule: "ERC-8421 BUDGET-010 · 1M gas for staked entities" },
+]
+
+export interface Run {
+  scenario: Scenario
+  hash: Hex
+  recipient: Address
+  amount: bigint
+  fee: bigint
+  signMs: number
+  at: number
+  verdicts: Partial<Record<MempoolKey, Verdict>>
+  via?: "alt" | "stock"
+  status?: string
+  delta?: { recipient: bigint; paymaster: bigint; senderEth: bigint }
+  included?: Inclusion
+}
+
+export type RunPhase = "submitting" | "pending" | "included" | "rejected" | "reverted"
+
+export function runPhase(r: Run): RunPhase {
+  if (r.status === "OnChain") return "included"
+  if (r.status === "Reverted") return "reverted"
+  const answered = MEMPOOLS.every((m) => r.verdicts[m.key])
+  const admitted = MEMPOOLS.some((m) => r.verdicts[m.key]?.accepted)
+  if (answered && !admitted) return "rejected"
+  return admitted ? "pending" : "submitting"
+}
+
+export const PHASE_BADGE: Record<RunPhase, { label: string; variant: "success" | "destructive" | "outline" }> = {
+  submitting: { label: "Submitting", variant: "outline" },
+  pending: { label: "Pending", variant: "outline" },
+  included: { label: "Complete", variant: "success" },
+  rejected: { label: "Rejected", variant: "destructive" },
+  reverted: { label: "Reverted", variant: "destructive" },
+}
+
+export const SCENARIO_LABEL: Record<Scenario, string> = {
+  send: "Payment",
+  tamper: "Tampered signature",
+  underpay: "Underpaid fee",
+}
+
+/** What the activity list keeps between visits. Amounts are strings because JSON has no bigint. */
+export interface ActivityEntry {
+  hash: Hex
+  scenario: Scenario
+  recipient: Address
+  amount: string
+  phase: RunPhase
+  via?: "alt" | "stock"
+  block?: string
+  at: number
+}
+
+export const toActivity = (r: Run): ActivityEntry => ({
+  hash: r.hash,
+  scenario: r.scenario,
+  recipient: r.recipient,
+  amount: r.amount.toString(),
+  phase: runPhase(r),
+  via: r.via,
+  block: r.included?.block.toString(),
+  at: r.at,
+})
+
+const activityKey = (account: Address) => `qpay.activity.${account.toLowerCase()}`
+
+export function loadActivity(account: Address): ActivityEntry[] {
+  try {
+    return JSON.parse(localStorage.getItem(activityKey(account)) ?? "[]") as ActivityEntry[]
+  } catch {
+    return []
+  }
+}
+
+export function saveActivity(account: Address, entries: ActivityEntry[]) {
+  localStorage.setItem(activityKey(account), JSON.stringify(entries.slice(0, 20)))
+}

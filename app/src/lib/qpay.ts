@@ -14,10 +14,11 @@ import {
   type Verdict,
 } from "@qpay/frametx"
 import type { FrameTx } from "@forshtat/hegota-support/tx"
+import { NODE_RPC } from "@/lib/site"
 
 /** All three RPCs allow any origin, so the browser calls them directly. Override at build time with VITE_*_RPC. */
 export const endpoints: Endpoints = {
-  node: import.meta.env.VITE_NODE_RPC ?? "https://altmempool.forshtat.com",
+  node: NODE_RPC,
   altMempool: import.meta.env.VITE_ALT_RPC ?? "http://127.0.0.1:14337/rpc/",
   stockAltMempool: import.meta.env.VITE_STOCK_RPC ?? "https://altmempoolgateway.forshtat.com/rpc",
 }
@@ -75,14 +76,19 @@ const converterAbi = [
 ] as const
 
 /** Converts this browser's Falcon key to the verifier's NTT form (free eth_call) and asks the onboarding service for an account. */
-export async function createAccount(d: Deployment): Promise<Address> {
+export type OnboardStage = "key" | "register" | "deploy"
+
+export async function createAccount(d: Deployment, onStage: (stage: OnboardStage) => void = () => {}): Promise<Address> {
+  onStage("key")
   const signer = browserSigner()
+  onStage("register")
   const pubkey = await client.readContract({
     address: d.keyConverter,
     abi: converterAbi,
     functionName: "toNttKey",
     args: [bytesToHex(signer.publicKeyCoeffs)],
   })
+  onStage("deploy")
   const res = await fetch("/api/onboard", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -137,6 +143,22 @@ export interface Prepared {
   signMs: number
 }
 
+const FEE_CAPS = { maxFeePerGas: 3_000_000n, maxPriorityFeePerGas: 2_000_000n }
+
+/** The USDC fee the paymaster will ask for. It depends only on the gas limits and fee caps, so nothing is signed. */
+export const estimateFee = (d: Deployment, account: Address): bigint =>
+  buildQPayTx({
+    chainId: BigInt(d.chainId),
+    account,
+    paymaster: d.paymaster,
+    usdc: d.usdc,
+    recipient: account,
+    amount: 0n,
+    nonceSeq: 0n,
+    ...FEE_CAPS,
+    usdcPerEth: BigInt(d.usdcPerEth),
+  }).fee
+
 export async function prepare(d: Deployment, account: Address, recipient: Address, amount: bigint, scenario: Scenario): Promise<Prepared> {
   const nonceSeq = BigInt(await client.getTransactionCount({ address: account }))
   const quoted = buildQPayTx({
@@ -147,8 +169,7 @@ export async function prepare(d: Deployment, account: Address, recipient: Addres
     recipient,
     amount,
     nonceSeq,
-    maxFeePerGas: 3_000_000n,
-    maxPriorityFeePerGas: 2_000_000n,
+    ...FEE_CAPS,
     usdcPerEth: BigInt(d.usdcPerEth),
   })
   const { tx, fee } =
@@ -161,8 +182,7 @@ export async function prepare(d: Deployment, account: Address, recipient: Addres
           recipient,
           amount,
           nonceSeq,
-          maxFeePerGas: 3_000_000n,
-          maxPriorityFeePerGas: 2_000_000n,
+          ...FEE_CAPS,
           usdcPerEth: BigInt(d.usdcPerEth),
           feeOverride: quoted.fee / 10n,
         })
