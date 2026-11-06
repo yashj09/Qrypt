@@ -1,7 +1,7 @@
 import { put } from "@vercel/blob"
 import { isAddress } from "viem"
-import { isPushEndpoint, pushMessage, pushPath, type PushRecord } from "../src/lib/push-format"
-import { accountSigned, freshTimestamp, json } from "./_account-auth"
+import { isPushEndpoint, pushMessage, pushPath, type PushRecord } from "../src/lib/push-format.js"
+import { accountSigned, freshTimestamp, json } from "./_account-auth.js"
 
 /**
  * Payment-notification subscriptions, read by the push watcher next to our sidecar.

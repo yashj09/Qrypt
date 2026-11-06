@@ -1,7 +1,7 @@
 import { get, put } from "@vercel/blob"
 import { isAddress, isHex, type Hex } from "viem"
-import { recoveryMessage, type RecoveryRecord } from "../src/lib/recovery-format"
-import { accountSigned, freshTimestamp, json } from "./_account-auth"
+import { recoveryMessage, type RecoveryRecord } from "../src/lib/recovery-format.js"
+import { accountSigned, freshTimestamp, json } from "./_account-auth.js"
 
 /**
  * Face ID recovery blobs. Each record is the Falcon seed AES-GCM-encrypted under a key only the user's passkey can
