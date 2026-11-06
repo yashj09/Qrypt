@@ -1,7 +1,7 @@
 import { chromium } from "playwright";
 
 /** The website wallet end to end: onboard a fresh account in /app, send 1 USDC, see it included. */
-const WALLET = process.env.EYRIE_WALLET ?? "http://localhost:5180";
+const WALLET = process.env.QRYPT_WALLET ?? "http://localhost:5180";
 const step = (msg: string) => console.log(`- ${msg}`);
 
 async function main() {

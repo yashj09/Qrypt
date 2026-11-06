@@ -29,6 +29,7 @@ import { webVault } from "@/lib/vault/web"
 import { askPasskey, passkeysAllowedHere } from "@/lib/passkey"
 import { recoverWithPasskey, uploadRecovery } from "@/lib/recovery"
 import { RecoveryStatus } from "@/components/vault/recovery-status"
+import { NotificationsCard } from "@/components/wallet/notifications-card"
 import { cn } from "@/lib/utils"
 
 export default function AppPage() {
@@ -112,6 +113,7 @@ function WalletPage() {
         onPasskeyAdded={async (key) => account && uploadRecovery(account, key, (await webVault.keyStore.seed())!)}
         footer={<RecoveryStatus account={account} />}
       />
+      {account && <NotificationsCard account={account} />}
       <KeyCard busy={busy !== null} onBackup={actions.backup} onRotate={rotate} onClose={actions.close} onForget={actions.forget} />
     </>
   )

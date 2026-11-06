@@ -58,16 +58,19 @@ The local chain also starts before Hegota: wait for block 64. There is no stock 
 |---|---|
 | App and onboarding function | Vercel project `qpay` (root `app/`), https://qpay-psi.vercel.app |
 | Our BUDGET-010 sidecar | Laptop: `./devnet/sidecar.sh`, exposed with `cloudflared tunnel --url http://127.0.0.1:14337` |
-| Vercel env | `ONBOARD_KEY` (devnet operator key = `.qpay/deployer.hex`), `QPAY_FACTORY`, `QPAY_NODE_RPC`, `VITE_ALT_RPC` (tunnel URL + `/rpc/`) |
+| Push watcher (payment notifications) | Laptop: `pnpm push-watcher`, reads `.qpay/push.env` (VAPID keys) and `.env.local` (Blob token) |
+| Recovery and push records | Private Vercel Blob store `qrypt-recovery`: `recovery/*` (Face ID recovery ciphertext), `push/*` (push subscriptions) |
+| Vercel env | `ONBOARD_KEY` (devnet operator key = `.qpay/deployer.hex`), `QPAY_FACTORY`, `QPAY_NODE_RPC`, `VITE_ALT_RPC` (tunnel URL + `/rpc/`), `BLOB_READ_WRITE_TOKEN` (from the connected store) |
 
 **Keep the sidecar and tunnel running as detached processes,** so closing a terminal or an agent session doesn't kill them:
 
 ```sh
 QPAY_NODE_RPC=https://altmempool.forshtat.com nohup ./devnet/sidecar.sh > .qpay/sidecar.log 2>&1 < /dev/null & disown
 nohup cloudflared tunnel --no-autoupdate --url http://127.0.0.1:14337 > .qpay/tunnel.log 2>&1 < /dev/null & disown
+nohup pnpm push-watcher > .qpay/push-watcher.log 2>&1 < /dev/null & disown
 ```
 
-To check them: `ps -ax | grep -E "skandha.js node|cloudflared tunnel --no-autoupdate --url"`. Keep the laptop awake with `caffeinate -dimsu &`.
+To check them: `ps -ax | grep -E "skandha.js node|cloudflared tunnel --no-autoupdate --url|push-watcher"`. Keep the laptop awake with `caffeinate -dimsu &`.
 
 **If the tunnel restarts,** its URL changes. Point the app at the new URL and redeploy (about 1 minute):
 
@@ -82,6 +85,8 @@ Until you redeploy, judges' transactions still land through the organisers' host
 **After a devnet reset,** run the reset steps above. Then update `QPAY_FACTORY` from the new `deployments/1337.json`, commit, and redeploy. The deployment JSON is bundled into the app.
 
 **Factory float:** each new account uses 0.02 ETH of stake from `QPayFactory`. The factory was funded with 4 ETH, enough for about 200 accounts. Top it up with a plain transfer from the deployer key.
+
+**Payment notifications.** The watcher polls the chain every 4 seconds for `Transfer` logs to subscribed accounts and sends Web Push through the browser's push service. It reloads subscriptions from Blob every minute and deletes ones the push service reports gone (404/410). Its cursor is in `.qpay/push-watcher.json`; after downtime it catches up at most 1,000 blocks. `.qpay/push.env` holds the VAPID key pair. Its public key must equal `VAPID_PUBLIC_KEY` in `app/src/lib/site.ts`; if you regenerate the pair, update that constant, redeploy, and every browser must subscribe again. `pnpm test:push` runs it end to end (needs `pnpm app`).
 
 ## Changing the account contract
 

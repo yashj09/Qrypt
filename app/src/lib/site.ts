@@ -2,6 +2,10 @@ export const BRAND = "Qrypt"
 
 export const NODE_RPC: string = import.meta.env.VITE_NODE_RPC ?? "https://altmempool.forshtat.com"
 
+/** The push watcher's VAPID public key (its private half lives only in the laptop's .qpay/push.env). */
+export const VAPID_PUBLIC_KEY: string =
+  import.meta.env.VITE_VAPID_PUBLIC_KEY ?? "BJOkFmkpXr4HrNrZ4TrdK8hPbWCs17314GEeBjrQCAnFiPAHwXq-JXbxFR3qkqdyk1GisysJMpChU1PFJJEw2sw"
+
 /** Where the onboarding and config functions live. Empty on the website (same origin); absolute in the extension. */
 export const API_BASE: string = import.meta.env.VITE_API_BASE ?? ""
 
