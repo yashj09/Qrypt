@@ -53,17 +53,32 @@ export async function loadDeployment(): Promise<Deployment> {
 const SEED_KEY = "qpay.falconSeed"
 const accountKey = (d: Deployment) => `qpay.account.${d.chainId}.${d.factory.toLowerCase()}`
 
+export const newSeed = (): Hex => bytesToHex(crypto.getRandomValues(new Uint8Array(32)))
+export const storedSeed = () => localStorage.getItem(SEED_KEY) as Hex | null
+export const storeSeed = (seed: Hex) => localStorage.setItem(SEED_KEY, seed)
+export const signerFromSeed = (seed: Hex) => falconFromSeed(hexToBytes(seed))
+
 /** This browser's Falcon key, created on first visit. It never leaves the device; only the public key is sent. */
 export function browserSigner() {
-  let seed = localStorage.getItem(SEED_KEY) as Hex | null
+  let seed = storedSeed()
   if (!seed) {
-    seed = bytesToHex(crypto.getRandomValues(new Uint8Array(32)))
-    localStorage.setItem(SEED_KEY, seed)
+    seed = newSeed()
+    storeSeed(seed)
   }
-  return falconFromSeed(hexToBytes(seed))
+  return signerFromSeed(seed)
 }
 
 export const storedAccount = (d: Deployment) => localStorage.getItem(accountKey(d)) as Address | null
+export const storeAccount = (d: Deployment, account: Address) => localStorage.setItem(accountKey(d), account)
+
+/** The verifier's NTT-domain form of a Falcon key, computed by the converter contract in a free read call. */
+export const nttKeyOf = (d: Deployment, seed: Hex): Promise<Hex> =>
+  client.readContract({
+    address: d.keyConverter,
+    abi: converterAbi,
+    functionName: "toNttKey",
+    args: [bytesToHex(signerFromSeed(seed).publicKeyCoeffs)],
+  })
 
 export function forgetAccount(d: Deployment) {
   localStorage.removeItem(accountKey(d))

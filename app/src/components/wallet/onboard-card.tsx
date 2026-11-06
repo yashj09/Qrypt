@@ -27,9 +27,10 @@ interface Props {
   stage: OnboardStage | null
   disabled: boolean
   onCreate: () => void
+  onRestore: () => void
 }
 
-export function OnboardCard({ stage, disabled, onCreate }: Props) {
+export function OnboardCard({ stage, disabled, onCreate, onRestore }: Props) {
   const busy = stage !== null
   const current = stage ? STAGES.findIndex((s) => s.key === stage) : -1
   return (
@@ -60,6 +61,9 @@ export function OnboardCard({ stage, disabled, onCreate }: Props) {
         <Button size="lg" disabled={disabled || busy} onClick={onCreate}>
           {busy ? <Spinner data-icon="inline-start" /> : <KeyRoundIcon data-icon="inline-start" />}
           {busy ? STAGES[current]?.title ?? "Working" : "Create my account"}
+        </Button>
+        <Button variant="ghost" disabled={busy} onClick={onRestore}>
+          I have a backup file
         </Button>
         <p className="text-center text-xs text-muted-foreground">
           Devnet only. The key lives in this browser's storage, so clearing site data loses the account.

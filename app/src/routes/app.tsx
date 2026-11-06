@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import type { Address } from "viem"
-import { AlertCircleIcon, PanelRightOpenIcon } from "lucide-react"
+import { AlertCircleIcon, InfoIcon, PanelRightOpenIcon } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
@@ -10,6 +10,7 @@ import { AddTokenDialog } from "@/components/wallet/add-token-dialog"
 import { KeyCard } from "@/components/wallet/key-card"
 import { PortfolioCard } from "@/components/wallet/portfolio-card"
 import { ReceiveDialog } from "@/components/wallet/receive-dialog"
+import { RestoreDialog } from "@/components/wallet/restore-dialog"
 import { OnboardCard } from "@/components/wallet/onboard-card"
 import { SendCard } from "@/components/wallet/send-card"
 import { TopBar } from "@/components/wallet/top-bar"
@@ -36,7 +37,8 @@ import {
   type Scenario,
 } from "@/lib/qpay"
 import { addCustomToken, balanceOf, formatAsset, knownAssets, readWallet, transferCall, type WalletSnapshot } from "@/lib/assets"
-import { loadActivity, saveActivity, toActivity, type ActivityEntry, type Intent, type Run } from "@/lib/run"
+import { closeAccountCalls, createBackup, downloadBackup, prepareRotation, restoreBackup, settleRotation } from "@/lib/keys"
+import { loadActivity, runPhase, saveActivity, toActivity, type ActivityEntry, type Intent, type Run } from "@/lib/run"
 
 const STRESS_RECIPIENT: Address = "0x000000000000000000000000000000000000dEaD"
 const STRESS_AMOUNT = 1_000_000n
@@ -48,6 +50,8 @@ export default function AppPage() {
   const [tokensVersion, setTokensVersion] = useState(0)
   const [receiveOpen, setReceiveOpen] = useState(false)
   const [addTokenOpen, setAddTokenOpen] = useState(false)
+  const [restoreOpen, setRestoreOpen] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [stage, setStage] = useState<OnboardStage | null>(null)
   const [busy, setBusy] = useState<Scenario | null>(null)
@@ -83,6 +87,8 @@ export default function AppPage() {
         const a = storedAccount(d)
         setAccount(a)
         setActivity(a ? loadActivity(a) : [])
+        if (a)
+          settleRotation(d, a).then((r) => r === "rotated" && setNotice("Your key rotation landed while you were away. Make a new backup."))
       })
       .catch((e) => setError(String(e?.message ?? e)))
   }, [])
@@ -124,8 +130,8 @@ export default function AppPage() {
     })
   }
 
-  const onRun = async (scenario: Scenario, intent: Intent) => {
-    if (!deployment || !account) return
+  const onRun = async (scenario: Scenario, intent: Intent): Promise<Run | null> => {
+    if (!deployment || !account) return null
     setBusy(scenario)
     setError(null)
     setTab("mempools")
@@ -170,7 +176,7 @@ export default function AppPage() {
           await new Promise((r) => setTimeout(r, 1500))
         }
         if (current!.status === "OnChain") {
-          const ethSent = t?.asset.kind === "eth" ? t.amount : 0n
+          const ethSent = intent.calls.reduce((sum, c) => sum + (c.value ?? 0n), 0n)
           update({
             delta: {
               recipient: t && before.recipient !== undefined ? (await balanceOf(t.asset, t.recipient)) - before.recipient : undefined,
@@ -188,6 +194,41 @@ export default function AppPage() {
     } finally {
       setBusy(null)
     }
+    return current
+  }
+
+  const onBackup = async (password: string) => {
+    if (!deployment || !account) return
+    downloadBackup(await createBackup(deployment, account, password))
+    setNotice("Backup downloaded. Keep the file and the password in different places.")
+  }
+
+  const onRotate = async () => {
+    if (!deployment || !account) return
+    setNotice(null)
+    const call = await prepareRotation(deployment, account)
+    const r = await onRun("send", { title: "Rotate Falcon key", calls: [call] })
+    const result = r && runPhase(r) === "included" ? await settleRotation(deployment, account) : "unchanged"
+    setNotice(
+      result === "rotated"
+        ? "Key rotated. The old key no longer works, and neither do old backups: make a new one now."
+        : "The rotation didn't land, so your current key is unchanged.",
+    )
+  }
+
+  const onCloseAccount = async (to: Address) => {
+    if (!deployment || !account || !wallet) return
+    const r = await onRun("send", {
+      title: "Close account",
+      calls: closeAccountCalls(deployment, account, to, assets, wallet.holdings),
+    })
+    if (r && runPhase(r) === "included") setNotice(`Account closed. Stake and balances went to ${short(to, 4)}.`)
+  }
+
+  const onRestore = async (file: File, password: string) => {
+    if (!deployment) return
+    selectAccount(await restoreBackup(deployment, file, password))
+    setNotice("Key restored and checked onchain. This browser now controls the account.")
   }
 
   const inspector = (
@@ -230,6 +271,12 @@ export default function AppPage() {
       <div className={cn("grid flex-1", inspectorOpen && "lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]")}>
         <main className="flex justify-center px-4 py-8 lg:px-8 lg:py-12">
           <div className="flex w-full max-w-md flex-col gap-6">
+            {notice && (
+              <Alert>
+                <InfoIcon />
+                <AlertDescription>{notice}</AlertDescription>
+              </Alert>
+            )}
             {error && (
               <Alert variant="destructive">
                 <AlertCircleIcon />
@@ -262,7 +309,7 @@ export default function AppPage() {
                 />
                 {run && <TransferStatus run={run} />}
                 <Activity local={activity} transfers={wallet?.transfers ?? null} />
-                <KeyCard onForget={onForget} />
+                <KeyCard busy={busy !== null} onBackup={onBackup} onRotate={onRotate} onClose={onCloseAccount} onForget={onForget} />
                 {deployment && (
                   <>
                     <ReceiveDialog
@@ -284,7 +331,10 @@ export default function AppPage() {
                 )}
               </>
             ) : (
-              <OnboardCard stage={stage} disabled={!deployment} onCreate={onCreate} />
+              <>
+                <OnboardCard stage={stage} disabled={!deployment} onCreate={onCreate} onRestore={() => setRestoreOpen(true)} />
+                <RestoreDialog open={restoreOpen} onOpenChange={setRestoreOpen} onRestore={onRestore} />
+              </>
             )}
           </div>
         </main>
