@@ -1,8 +1,5 @@
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
-import { chromium, type BrowserContext, type Page } from "playwright";
-import { ROOT } from "./lib/config.ts";
+import type { BrowserContext, Page } from "playwright";
+import { launchWithExtension } from "./lib/extension-browser.ts";
 
 /**
  * Drives the unpacked extension end to end against a running local wallet (`pnpm app`, port 5180):
@@ -10,7 +7,6 @@ import { ROOT } from "./lib/config.ts";
  * approving each request in the window the extension opens.
  */
 const WALLET = process.env.EYRIE_WALLET ?? "http://localhost:5180";
-const EXTENSION = resolve(ROOT, "extension");
 
 const step = (msg: string) => console.log(`- ${msg}`);
 
@@ -23,13 +19,8 @@ async function approveNext(context: BrowserContext, button: string): Promise<voi
 }
 
 async function main() {
-  const context = await chromium.launchPersistentContext(mkdtempSync(join(tmpdir(), "eyrie-e2e-")), {
-    channel: "chromium",
-    headless: true,
-    args: [`--disable-extensions-except=${EXTENSION}`, `--load-extension=${EXTENSION}`],
-  });
+  const { context, worker } = await launchWithExtension();
   try {
-    const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent("serviceworker"));
     if (WALLET.startsWith("http://localhost")) await worker.evaluate(() => chrome.storage.local.set({ useLocal: true }));
     step(`extension loaded: ${worker.url().split("/")[2]}`);
 

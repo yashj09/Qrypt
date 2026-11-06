@@ -1,0 +1,57 @@
+{
+  "manifest_version": 3,
+  "name": "Eyrie",
+  "version": "0.1.0",
+  "description": "The post-quantum wallet for EIP-8141: Falcon-512 keys, gas paid in USDC, no ETH needed.",
+  "icons": {
+    "128": "icon-128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Eyrie",
+    "default_icon": {
+      "128": "icon-128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "inpage.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_start"
+    }
+  ],
+  "externally_connectable": {
+    "matches": [
+      "https://qpay-psi.vercel.app/*",
+      "http://localhost:5180/*"
+    ]
+  },
+  "permissions": [
+    "storage",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://altmempool.forshtat.com/*",
+    "https://altmempoolgateway.forshtat.com/*",
+    "https://*.trycloudflare.com/*",
+    "https://qpay-psi.vercel.app/*",
+    "http://localhost:5180/*"
+  ]
+}
