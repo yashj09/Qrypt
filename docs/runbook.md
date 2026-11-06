@@ -51,3 +51,25 @@ The local chain also starts before Hegota: wait for block 64. There is no stock 
 |---|---|---|
 | Our sidecar (BUDGET-010) | `./devnet/sidecar.sh` | 14337 |
 | App | `pnpm app` | 5180 |
+
+## Public deployment for judges
+
+| Piece | Where |
+|---|---|
+| App and onboarding function | Vercel project `qpay` (root `app/`), https://qpay-psi.vercel.app |
+| Our BUDGET-010 sidecar | Laptop: `./devnet/sidecar.sh`, exposed with `cloudflared tunnel --url http://127.0.0.1:14337` |
+| Vercel env | `ONBOARD_KEY` (devnet operator key = `.qpay/deployer.hex`), `QPAY_FACTORY`, `QPAY_NODE_RPC`, `VITE_ALT_RPC` (tunnel URL + `/rpc/`) |
+
+**If the tunnel restarts,** its URL changes. Point the app at the new URL and redeploy (about 1 minute):
+
+```sh
+U=$(grep -oE "https://[a-z0-9-]+\.trycloudflare\.com" .qpay/tunnel.log | tail -1)
+printf '%s' "$U/rpc/" | npx vercel env add VITE_ALT_RPC production --force
+npx vercel deploy --prod --yes
+```
+
+Until you redeploy, judges' transactions still land through the organisers' hosted alt mempool, which now admits them. The app falls back to it automatically.
+
+**After a devnet reset,** run the reset steps above. Then update `QPAY_FACTORY` from the new `deployments/1337.json`, commit, and redeploy. The deployment JSON is bundled into the app.
+
+**Factory float:** each new account uses 0.02 ETH of stake from `QPayFactory`. The factory was funded with 4 ETH, enough for about 200 accounts. Top it up with a plain transfer from the deployer key.
