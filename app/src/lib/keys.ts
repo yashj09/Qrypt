@@ -1,21 +1,12 @@
 import { encodeFunctionData, keccak256, parseAbi, type Address, type Hex } from "viem"
 import { erc20Transfer, type Call } from "@qpay/frametx"
-import {
-  client,
-  estimateFee,
-  newSeed,
-  nttKeyOf,
-  storeAccount,
-  storeSeed,
-  storedSeed,
-  type Deployment,
-} from "@/lib/qpay"
+import { client, estimateFee, newSeed, nttKeyOf, storeAccount, type Deployment } from "@/lib/qpay"
+import { keyStore } from "@/lib/keystore"
 import { assetKey, usdcAsset, type Asset, type Holdings } from "@/lib/assets"
 
 const accountAbi = parseAbi(["function falconPubkey() view returns (bytes)", "function rotateKey(bytes newNttPubkey)"])
 const registryAbi = parseAbi(["function unlockStake()", "function withdrawStake(address withdrawAddress)"])
 
-const PENDING_SEED_KEY = "qpay.pendingSeed"
 const PBKDF2_ITERATIONS = 600_000
 
 /** Proves a seed controls an account by comparing its NTT key with the one the account stores. */
@@ -56,8 +47,8 @@ async function aesKey(password: string, salt: Uint8Array<ArrayBuffer>, iteration
 }
 
 export async function createBackup(d: Deployment, account: Address, password: string): Promise<KeyBackup> {
-  const seed = storedSeed()
-  if (!seed) throw new Error("This browser has no Falcon key to back up.")
+  const seed = await keyStore().seed()
+  if (!seed) throw new Error("There's no unlocked Falcon key to back up.")
   const salt = crypto.getRandomValues(new Uint8Array(16))
   const iv = crypto.getRandomValues(new Uint8Array(12))
   const key = await aesKey(password, salt, PBKDF2_ITERATIONS)
@@ -81,8 +72,8 @@ export function downloadBackup(backup: KeyBackup) {
   URL.revokeObjectURL(url)
 }
 
-/** Decrypts a backup and checks onchain that the key really controls the account before keeping it. */
-export async function restoreBackup(d: Deployment, file: File, password: string): Promise<Address> {
+/** Decrypts a backup and checks onchain that the key still controls the account. Doesn't store anything. */
+export async function openBackup(d: Deployment, file: File, password: string): Promise<{ account: Address; seed: Hex }> {
   let backup: KeyBackup
   try {
     backup = JSON.parse(await file.text())
@@ -101,9 +92,15 @@ export async function restoreBackup(d: Deployment, file: File, password: string)
   if (!(await seedControls(d, backup.account, seed))) {
     throw new Error("This key no longer controls the account. It may have been rotated since the backup.")
   }
-  storeSeed(seed)
-  storeAccount(d, backup.account)
-  return backup.account
+  return { account: backup.account, seed }
+}
+
+/** Opens a backup and makes its key and account this wallet's. */
+export async function restoreBackup(d: Deployment, file: File, password: string): Promise<Address> {
+  const { account, seed } = await openBackup(d, file, password)
+  await keyStore().save(seed)
+  storeAccount(d, account)
+  return account
 }
 
 // ---------------------------------------------------------------------------------------------- rotation ------
@@ -115,7 +112,7 @@ export async function restoreBackup(d: Deployment, file: File, password: string)
 export async function prepareRotation(d: Deployment, account: Address): Promise<Call> {
   const seed = newSeed()
   const ntt = await nttKeyOf(d, seed)
-  localStorage.setItem(PENDING_SEED_KEY, seed)
+  await keyStore().pending.set(seed)
   return {
     to: account,
     data: encodeFunctionData({ abi: accountAbi, functionName: "rotateKey", args: [ntt] }),
@@ -126,15 +123,16 @@ export async function prepareRotation(d: Deployment, account: Address): Promise<
 
 /** Promotes the pending key once the chain says it's the account's key; drops it if the rotation never landed. */
 export async function settleRotation(d: Deployment, account: Address): Promise<"rotated" | "unchanged"> {
-  const pending = localStorage.getItem(PENDING_SEED_KEY) as Hex | null
+  const store = keyStore()
+  const pending = await store.pending.get()
   if (!pending) return "unchanged"
   if (await seedControls(d, account, pending)) {
-    storeSeed(pending)
-    localStorage.removeItem(PENDING_SEED_KEY)
+    await store.save(pending)
+    await store.pending.set(null)
     return "rotated"
   }
-  const current = storedSeed()
-  if (current && (await seedControls(d, account, current))) localStorage.removeItem(PENDING_SEED_KEY)
+  const current = await store.seed()
+  if (current && (await seedControls(d, account, current))) await store.pending.set(null)
   return "unchanged"
 }
 

@@ -2,6 +2,9 @@ export const BRAND = "Eyrie"
 
 export const NODE_RPC: string = import.meta.env.VITE_NODE_RPC ?? "https://altmempool.forshtat.com"
 
+/** Where the onboarding and config functions live. Empty on the website (same origin); absolute in the extension. */
+export const API_BASE: string = import.meta.env.VITE_API_BASE ?? ""
+
 export const links = {
   repo: "https://github.com/yashj09/qpay",
   sidecarPr: "https://github.com/forshtat/mempool-workshop-sidecar/pull/2",

@@ -18,7 +18,8 @@ import {
   type Verdict,
 } from "@qpay/frametx"
 import type { FrameTx } from "@forshtat/hegota-support/tx"
-import { NODE_RPC } from "@/lib/site"
+import { API_BASE, NODE_RPC } from "@/lib/site"
+import { keyStore } from "@/lib/keystore"
 
 /** All three RPCs allow any origin, so the browser calls them directly. Override at build time with VITE_*_RPC. */
 export const endpoints: Endpoints = {
@@ -50,21 +51,30 @@ export async function loadDeployment(): Promise<Deployment> {
   return d
 }
 
-const SEED_KEY = "qpay.falconSeed"
 const accountKey = (d: Deployment) => `qpay.account.${d.chainId}.${d.factory.toLowerCase()}`
 
 export const newSeed = (): Hex => bytesToHex(crypto.getRandomValues(new Uint8Array(32)))
-export const storedSeed = () => localStorage.getItem(SEED_KEY) as Hex | null
-export const storeSeed = (seed: Hex) => localStorage.setItem(SEED_KEY, seed)
 export const signerFromSeed = (seed: Hex) => falconFromSeed(hexToBytes(seed))
 
-/** This browser's Falcon key, created on first visit. It never leaves the device; only the public key is sent. */
-export function browserSigner() {
-  let seed = storedSeed()
-  if (!seed) {
-    seed = newSeed()
-    storeSeed(seed)
+/** The seed in the active key store, creating one on first use. The private key never leaves the device. */
+export async function ensureSeed(): Promise<Hex> {
+  const existing = await keyStore().seed()
+  if (existing) return existing
+  const seed = newSeed()
+  await keyStore().save(seed)
+  return seed
+}
+
+export class WalletLockedError extends Error {
+  constructor() {
+    super("The wallet is locked. Unlock it to sign.")
   }
+}
+
+/** A Falcon signer for the active key store's seed; throws if the store is locked or empty. */
+export async function signer() {
+  const seed = await keyStore().seed()
+  if (!seed) throw new WalletLockedError()
   return signerFromSeed(seed)
 }
 
@@ -80,9 +90,9 @@ export const nttKeyOf = (d: Deployment, seed: Hex): Promise<Hex> =>
     args: [bytesToHex(signerFromSeed(seed).publicKeyCoeffs)],
   })
 
-export function forgetAccount(d: Deployment) {
+export async function forgetAccount(d: Deployment) {
   localStorage.removeItem(accountKey(d))
-  localStorage.removeItem(SEED_KEY)
+  await keyStore().clear()
 }
 
 const converterAbi = [
@@ -100,16 +110,16 @@ export type OnboardStage = "key" | "register" | "deploy"
 
 export async function createAccount(d: Deployment, onStage: (stage: OnboardStage) => void = () => {}): Promise<Address> {
   onStage("key")
-  const signer = browserSigner()
+  const seed = await ensureSeed()
   onStage("register")
   const pubkey = await client.readContract({
     address: d.keyConverter,
     abi: converterAbi,
     functionName: "toNttKey",
-    args: [bytesToHex(signer.publicKeyCoeffs)],
+    args: [bytesToHex(signerFromSeed(seed).publicKeyCoeffs)],
   })
   onStage("deploy")
-  const res = await fetch("/api/onboard", {
+  const res = await fetch(`${API_BASE}/api/onboard`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ pubkey, factory: d.factory }),
@@ -194,9 +204,9 @@ export async function prepareCalls(d: Deployment, account: Address, calls: Call[
   const base = txBase(d, account, BigInt(await client.getTransactionCount({ address: account })))
   const quoted = buildWalletTx({ ...base, calls })
   const { tx, fee, frames } = scenario === "underpay" ? buildWalletTx({ ...base, calls, feeOverride: quoted.fee / 10n }) : quoted
-  const signer = browserSigner()
+  const falcon = await signer()
   const started = performance.now()
-  let signed = await signQPay(tx, (digest) => signer.sign(digest))
+  let signed = await signQPay(tx, (digest) => falcon.sign(digest))
   const signMs = performance.now() - started
   if (scenario === "tamper") {
     const sig = hexToBytes(signed.signatures[0].signature)

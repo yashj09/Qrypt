@@ -1,6 +1,6 @@
 import { decodeFunctionData, erc20Abi, hashMessage, hashTypedData, hexToString, isAddress, isHex, parseAbi, type Address, type Hex } from "viem"
 import { bytesToHex, defaultGas, hexToBytes, type Call } from "@qpay/frametx"
-import { browserSigner, estimateFee, prepareCalls, toAlt, toStock, type Deployment } from "@/lib/qpay"
+import { estimateFee, prepareCalls, signer, toAlt, toStock, type Deployment } from "@/lib/qpay"
 import { short, units } from "@/lib/format"
 import type { EyrieRequest, RpcError } from "@/lib/connect/protocol"
 
@@ -98,7 +98,7 @@ export async function execute(d: Deployment, account: Address, r: Review): Promi
       return [account]
     case "message":
     case "typed":
-      return bytesToHex(await browserSigner().sign(hexToBytes(r.hash)))
+      return bytesToHex(await (await signer()).sign(hexToBytes(r.hash)))
     case "transaction": {
       const prepared = await prepareCalls(d, account, r.calls)
       const alt = await toAlt(prepared)
