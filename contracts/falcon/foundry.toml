@@ -1,0 +1,12 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+solc_version = "0.8.30"
+evm_version = "cancun"
+optimizer = true
+# ETHFALCON exp/pq-verifier-gas profile: via-IR is required (0.8.30's IR stack
+# layout is the first that compiles the fused NTT); high runs keep SWAR constants as PUSH32
+via_ir = true
+optimizer_runs = 1000000
+fs_permissions = [{ access = "read", path = "./test/fixtures" }, { access = "read", path = "./helpers" }, { access = "read-write", path = "../../deployments" }]

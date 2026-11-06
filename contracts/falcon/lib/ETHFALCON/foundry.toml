@@ -1,0 +1,36 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+optimizer = true
+# runs high enough that solc keeps the 32-byte SWAR constants as PUSH32 (see
+# ZKNoxHQ/ETHDILITHIUM, ADR-004: at 10000 it CODECOPYs a frequent one at every use)
+optimizer_runs = 1000000
+# the packed kernels are ~12% cheaper under the IR pipeline; solc 0.8.25's IR
+# stack layout cannot handle the fused passes, 0.8.30's can
+via_ir = true
+evm_version = "cancun"
+solc_version = "0.8.30"
+fs_permissions = [{ access = "read", path = "./test/" }]
+gas_limit = 72057594037927935  # 2^56 - 1 (JavaScript-friendly)
+ffi = true
+
+[profile.lite]
+optimizer = false
+evm_version = "cancun"
+solc_version = "0.8.30"
+via_ir = true
+# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+
+[profile.ci]
+src = "src"
+out = "out"
+libs = ["lib"]
+optimizer = true
+optimizer_runs = 1000000
+via_ir = true
+evm_version = "cancun"
+solc_version = "0.8.30"
+fs_permissions = [{ access = "read", path = "./test/" }]
+gas_limit = 72057594037927935
+ffi = true

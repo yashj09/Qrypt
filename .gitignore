@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.env
+.env.*
+*.log
+.DS_Store
+
+# foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+contracts/falcon/out/
+contracts/falcon/cache/
+contracts/falcon/broadcast/
+
+# local secrets and devnet state
+.qpay/

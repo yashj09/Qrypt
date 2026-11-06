@@ -1,0 +1,19 @@
+{
+  "name": "qpay",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:contracts": "forge build --root contracts",
+    "test:contracts": "forge test --root contracts",
+    "app": "pnpm --filter app dev"
+  },
+  "dependencies": {
+    "@forshtat/hegota-support": "0.0.1",
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "viem": "^2.57.16",
+    "@qpay/falcon": "workspace:*",
+    "@qpay/frametx": "workspace:*"
+  }
+}
