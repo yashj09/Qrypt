@@ -22,7 +22,8 @@ cat > "$DATA/config.json" <<JSON
   "stakingRegistryAddress": "$REGISTRY",
   "minStake": "10000000000000000",
   "minUnstakeDelay": 0,
-  "bundleInterval": 3000
+  "bundleInterval": 3000,
+  "maxSubmitAttempts": ${QPAY_MAX_SUBMIT_ATTEMPTS:-30}
 }
 JSON
 cd "$SIDECAR_DIR"
