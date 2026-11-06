@@ -13,7 +13,7 @@ Qrypt is a smart-account wallet whose only key is **Falcon-512**; there is no EC
 
 Built at ETHGlobal Mumbai 2026 for the Ethereum Foundation "Best use of the Frame Transaction Alternative Mempool" prize. Its brief names PQ-secure smart wallets and ERC-20 paymasters. Qrypt does both in one transaction.
 
-![Qrypt app: the wallet on the left, the dark under-the-hood inspector with live mempool verdicts on the right](docs/media/app.png)
+![Qrypt: the Send screen with the under-the-hood inspector pinned beside it, showing each mempool's verdict, the block, 0 wei of ETH on gas and the fee in USDC](docs/media/app.png)
 
 ![Qrypt landing page](docs/media/landing.png)
 

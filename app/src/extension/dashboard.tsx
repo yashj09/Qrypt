@@ -1,222 +1,34 @@
 import { useEffect, useState } from "react"
-import {
-  ActivityIcon,
-  AlertCircleIcon,
-  CpuIcon,
-  GlobeIcon,
-  InfoIcon,
-  LockIcon,
-  PlusIcon,
-  SendIcon,
-  SettingsIcon,
-  WalletIcon,
-  type LucideIcon,
-} from "lucide-react"
-import { LogoMark } from "@/components/brand/logo"
-import { NetworkBadge } from "@/components/brand/network-badge"
-import { Inspector } from "@/components/inspector/inspector"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
+import { GlobeIcon } from "lucide-react"
+import { WalletDashboard } from "@/components/dashboard/wallet-dashboard"
 import { Button } from "@/components/ui/button"
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
 import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "@/components/ui/item"
-import { Activity } from "@/components/wallet/activity"
-import { AddTokenDialog } from "@/components/wallet/add-token-dialog"
+import { UnlockMethodsCard } from "@/components/vault/unlock-methods-card"
 import { KeyCard } from "@/components/wallet/key-card"
-import { ReceiveDialog } from "@/components/wallet/receive-dialog"
-import { SendCard } from "@/components/wallet/send-card"
-import { TransferStatus } from "@/components/wallet/transfer-status"
-import { useWallet, type Wallet } from "@/hooks/use-wallet"
-import { assetKey } from "@/lib/assets"
-import { short, units } from "@/lib/format"
-import { AssetList } from "./components/asset-list"
-import { BalanceHero } from "./components/balance-hero"
+import { useWallet } from "@/hooks/use-wallet"
+import { short } from "@/lib/format"
+import { extensionVault } from "@/lib/vault/chrome"
 import { VaultGate } from "./components/vault-gate"
 import { mount } from "./mount"
 import { lock } from "./vault"
-import { UnlockMethodsCard } from "@/components/vault/unlock-methods-card"
-import { extensionVault } from "@/lib/vault/chrome"
 
-const SECTIONS = [
-  { id: "portfolio", label: "Portfolio", icon: WalletIcon },
-  { id: "send", label: "Send", icon: SendIcon },
-  { id: "activity", label: "Activity", icon: ActivityIcon },
-  { id: "hood", label: "Under the hood", icon: CpuIcon },
-  { id: "sites", label: "Connected sites", icon: GlobeIcon },
-  { id: "settings", label: "Settings", icon: SettingsIcon },
-] as const satisfies readonly { id: string; label: string; icon: LucideIcon }[]
-
-type SectionId = (typeof SECTIONS)[number]["id"]
-
-const sectionFromHash = (): SectionId => {
-  const id = window.location.hash.slice(1)
-  return SECTIONS.some((s) => s.id === id) ? (id as SectionId) : "portfolio"
-}
-
-function useSection(): [SectionId, (id: SectionId) => void] {
-  const [section, setSection] = useState(sectionFromHash)
-  useEffect(() => {
-    const onHash = () => setSection(sectionFromHash())
-    window.addEventListener("hashchange", onHash)
-    return () => window.removeEventListener("hashchange", onHash)
-  }, [])
-  return [section, (id) => (window.location.hash = id)]
-}
-
+/** The extension's fullscreen tab: the shared dashboard, plus connected sites. */
 function Dashboard() {
   const w = useWallet()
-  const { deployment, account, wallet, assets, notice, error } = w
-  const [section, go] = useSection()
-  const [receiveOpen, setReceiveOpen] = useState(false)
-  const [addTokenOpen, setAddTokenOpen] = useState(false)
-  const usdc = deployment && assets[0] ? wallet?.holdings[assetKey(assets[0])] : undefined
-
+  const { busy, actions } = w
   return (
-    <div className="flex min-h-svh bg-background text-foreground">
-      <aside className="sticky top-0 flex h-svh w-72 shrink-0 flex-col gap-6 border-r p-5">
-        <div className="flex items-center gap-2">
-          <LogoMark className="size-7" />
-          <span className="text-lg font-semibold tracking-tight">Qrypt</span>
-          <Badge variant="success" className="ml-1">
-            post-quantum
-          </Badge>
-        </div>
-        {account && (
-          <div className="flex flex-col gap-1 rounded-xl bg-muted p-3">
-            <span className="text-xs text-muted-foreground">Account</span>
-            <span className="font-mono text-sm">{short(account, 6)}</span>
-            <span className="text-sm tabular-nums">{usdc !== undefined ? `${units(usdc, 6)} USDC` : "…"}</span>
-          </div>
-        )}
-        <nav className="flex flex-col gap-1">
-          {SECTIONS.map((s) => (
-            <Button
-              key={s.id}
-              variant={section === s.id ? "secondary" : "ghost"}
-              className="justify-start"
-              onClick={() => go(s.id)}
-            >
-              <s.icon data-icon="inline-start" />
-              {s.label}
-            </Button>
-          ))}
-        </nav>
-        <div className="mt-auto flex flex-col gap-3">
-          <NetworkBadge />
-          <Button variant="outline" onClick={() => void lock()}>
-            <LockIcon data-icon="inline-start" />
-            Lock
-          </Button>
-        </div>
-      </aside>
-
-      <main className="flex min-w-0 flex-1 justify-center p-8">
-        <div className="flex w-full max-w-5xl flex-col gap-6">
-          <h1 className="text-2xl font-semibold tracking-tight">{SECTIONS.find((s) => s.id === section)!.label}</h1>
-          {notice && (
-            <Alert>
-              <InfoIcon />
-              <AlertDescription>{notice}</AlertDescription>
-            </Alert>
-          )}
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircleIcon />
-              <AlertTitle>Something went wrong</AlertTitle>
-              <AlertDescription className="break-all">{error}</AlertDescription>
-            </Alert>
-          )}
-          {!account ? (
-            <Empty className="border border-dashed">
-              <EmptyHeader>
-                <EmptyTitle>No account yet</EmptyTitle>
-                <EmptyDescription>Finish setting up Qrypt in the onboarding tab.</EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          ) : (
-            <Section id={section} w={w} usdc={usdc} go={go} onReceive={() => setReceiveOpen(true)} onAddToken={() => setAddTokenOpen(true)} />
-          )}
-        </div>
-      </main>
-
-      {account && deployment && (
+    <WalletDashboard
+      w={w}
+      onLock={() => void lock()}
+      settings={
         <>
-          <ReceiveDialog open={receiveOpen} onOpenChange={setReceiveOpen} account={account} chainId={deployment.chainId} assets={assets} />
-          <AddTokenDialog open={addTokenOpen} onOpenChange={setAddTokenOpen} onAdd={w.actions.addToken} />
-        </>
-      )}
-    </div>
-  )
-}
-
-interface SectionProps {
-  id: SectionId
-  w: Wallet
-  usdc: bigint | undefined
-  go: (id: SectionId) => void
-  onReceive: () => void
-  onAddToken: () => void
-}
-
-function Section({ id, w, usdc, go, onReceive, onAddToken }: SectionProps) {
-  const { deployment, account, wallet, assets, fee, names, busy, run, activity, tab, setTab, actions } = w
-  switch (id) {
-    case "portfolio":
-      return (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-          <div className="flex flex-col gap-6">
-            <BalanceHero account={account!} usdc={usdc} onSend={() => go("send")} onReceive={onReceive} onActivity={() => go("activity")} className="p-7" />
-            <div className="flex items-center justify-between">
-              <h2 className="font-medium">Assets</h2>
-              <Button variant="ghost" size="sm" onClick={onAddToken}>
-                <PlusIcon data-icon="inline-start" />
-                Add token
-              </Button>
-            </div>
-            <AssetList assets={assets} holdings={wallet?.holdings ?? null} />
-          </div>
-          <Activity local={activity} transfers={wallet?.transfers ?? null} names={names} />
-        </div>
-      )
-    case "send":
-      return (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <SendCard assets={assets} holdings={wallet?.holdings ?? null} fee={fee} sending={busy === "send"} disabled={!deployment || busy !== null} onSend={actions.send} />
-          {run ? <TransferStatus run={run} /> : <SendHint />}
-        </div>
-      )
-    case "activity":
-      return <Activity local={activity} transfers={wallet?.transfers ?? null} names={names} />
-    case "hood":
-      return (
-        <div className="rounded-2xl border bg-lattice p-6">
-          <Inspector run={run} tab={tab} onTab={setTab} busy={busy} canRun={!!deployment && !!account} onStress={actions.stress} />
-        </div>
-      )
-    case "sites":
-      return <ConnectedSites />
-    case "settings":
-      return (
-        <div className="grid gap-6 lg:grid-cols-2">
           <KeyCard busy={busy !== null} onBackup={actions.backup} onRotate={actions.rotate} onClose={actions.close} onForget={actions.forget} />
           <UnlockMethodsCard vault={extensionVault} />
-        </div>
-      )
-  }
-}
-
-function SendHint() {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>One transaction, no ETH</CardTitle>
-        <CardDescription>
-          Qrypt signs with Falcon-512 and repays the gas in USDC inside the same frame transaction. Watch it go through the
-          mempools under "Under the hood".
-        </CardDescription>
-      </CardHeader>
-    </Card>
+        </>
+      }
+      extraSections={[{ id: "sites", label: "Connected sites", icon: GlobeIcon, render: () => <ConnectedSites /> }]}
+    />
   )
 }
 

@@ -25,12 +25,17 @@ async function withFaceId(page: Page) {
   });
 }
 
+/** The dashboard's sidebar. */
+const nav = (page: Page, name: string) => page.locator("aside nav").getByRole("button", { name, exact: true }).click();
+
 async function sendOne(page: Page) {
+  await nav(page, "Send");
   await page.locator("#amount").fill("1");
   await page.getByRole("button", { name: "Review USDC payment" }).click();
   await page.getByRole("button", { name: "Sign and send" }).click();
-  await page.getByText("Recipient received").waitFor({ timeout: 90_000 });
-  return page.locator("aside dd").first().textContent();
+  const included = page.getByText(/Included in block \d+/);
+  await included.waitFor({ timeout: 120_000 });
+  return (await included.textContent())?.match(/\d+/)?.[0];
 }
 
 async function main() {
@@ -55,6 +60,7 @@ async function main() {
     step("locked, then unlocked with Face ID");
     step(`sent 1 USDC, included in block ${await sendOne(page)}`);
 
+    await nav(page, "Settings");
     await page.getByText("Recoverable with Face ID on your other devices.").waitFor({ timeout: 30_000 });
     const account = await page.evaluate(() => Object.entries(localStorage).find(([k]) => k.startsWith("qpay.account."))?.[1]);
     step(`Face ID recovery is saved for ${account}`);
@@ -73,6 +79,7 @@ async function main() {
     await recover();
     step(`wiped all site storage (a new phone), recovered the same account with Face ID, sent 1 USDC in block ${await sendOne(page)}`);
 
+    await nav(page, "Settings");
     await page.getByRole("button", { name: "Rotate", exact: true }).click();
     await page.getByRole("button", { name: "Rotate key" }).click();
     await page.getByText("Key rotated").waitFor({ timeout: 90_000 });

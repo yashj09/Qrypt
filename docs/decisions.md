@@ -84,3 +84,5 @@ The product is now **Qrypt**, at `qrypt.money`. Known conflict, accepted: **Qryp
 
 **The push watcher runs on the laptop, next to the sidecar.** It needs a long-running process and the VAPID private key, which we keep off Vercel. The VAPID public key is committed in `lib/site.ts`. Because the watcher POSTs to whatever endpoint a record holds, `/api/push` and the watcher only accept known push-service hosts.
 
+**The web wallet uses the extension's dashboard.** The desktop `/app` was a light wallet column with a dark inspector always open, built for the Eyrie demo. It looked like neither the extension nor the phone. Now one dark dashboard serves the website and the extension. The inspector is a section, and a pin keeps it beside the wallet for demos, so the "watch the frames while you send" view survives without taking half the screen by default.
+

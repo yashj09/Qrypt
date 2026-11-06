@@ -88,6 +88,10 @@ EIP-1193 request ──▶ createQryptPopupProvider               inpage.js (EIP
 - On a new device, "recover with Face ID" asks for any Qrypt passkey, fetches the record by the credential's hash, decrypts it, and checks onchain that the key still controls the account.
 - Rotating the key re-uploads the record, signed by the new key.
 
+## One dashboard, three hosts
+
+`components/dashboard/wallet-dashboard.tsx` is the wallet on wide screens: a sidebar (Portfolio, Send, Activity, Under the hood, Settings) and the open section in the URL hash. The website's `/app` and the extension's fullscreen tab both render it on the same `useWallet()`; each passes its own settings cards and lock, and the extension adds Connected sites. "Keep open beside wallet" pins the inspector as a right panel on screens 1280 px and wider (`localStorage` `qrypt.pinHood`). Sections size their columns with container queries, so they stack when the panel is open. Phones get `components/mobile/` instead; the popup has its own compact layout. Every wallet page is dark; only the landing page is light.
+
 ## Phone app and push
 
 - `/app` below 768 px renders `components/mobile/`: home, number-pad send, receive (QR of a pay link), scan (`qr-scanner`), activity, settings. Pay links, EIP-681 URIs and plain addresses all parse through `lib/payment-request.ts`.

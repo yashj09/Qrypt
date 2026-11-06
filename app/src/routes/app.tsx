@@ -1,44 +1,31 @@
 import { useEffect, useState } from "react"
-import { registerServiceWorker, setThemeColor } from "@/lib/pwa"
-import { AlertCircleIcon, InfoIcon, PanelRightOpenIcon } from "lucide-react"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { Inspector } from "@/components/inspector/inspector"
-import { Activity } from "@/components/wallet/activity"
-import { AddTokenDialog } from "@/components/wallet/add-token-dialog"
-import { KeyCard } from "@/components/wallet/key-card"
-import { PortfolioCard } from "@/components/wallet/portfolio-card"
-import { ReceiveDialog } from "@/components/wallet/receive-dialog"
-import { RestoreDialog } from "@/components/wallet/restore-dialog"
-import { OnboardCard } from "@/components/wallet/onboard-card"
-import { SendCard } from "@/components/wallet/send-card"
-import { TopBar } from "@/components/wallet/top-bar"
-import { TransferStatus } from "@/components/wallet/transfer-status"
-import { useWallet } from "@/hooks/use-wallet"
-import { useMediaQuery } from "@/hooks/use-media-query"
+import { AlertCircleIcon, InfoIcon } from "lucide-react"
+import { Wordmark } from "@/components/brand/logo"
+import { WalletDashboard } from "@/components/dashboard/wallet-dashboard"
 import { MobileWallet } from "@/components/mobile/mobile-wallet"
-import { parsePaymentRequest } from "@/lib/payment-request"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import type { Protection } from "@/components/vault/protection-choice"
+import { RecoveryStatus } from "@/components/vault/recovery-status"
+import { UnlockMethodsCard } from "@/components/vault/unlock-methods-card"
 import { useVaultState } from "@/components/vault/use-vault"
 import { WebVaultGate } from "@/components/vault/web-vault-gate"
-import { UnlockMethodsCard } from "@/components/vault/unlock-methods-card"
-import type { Protection } from "@/components/vault/protection-choice"
-import { openBackup } from "@/lib/keys"
-import { storeAccount } from "@/lib/qpay"
-import { webVault } from "@/lib/vault/web"
-import { askPasskey, passkeysAllowedHere } from "@/lib/passkey"
-import { recoverWithPasskey, uploadRecovery } from "@/lib/recovery"
-import { RecoveryStatus } from "@/components/vault/recovery-status"
+import { KeyCard } from "@/components/wallet/key-card"
 import { NotificationsCard } from "@/components/wallet/notifications-card"
-import { cn } from "@/lib/utils"
+import { OnboardCard } from "@/components/wallet/onboard-card"
+import { RestoreDialog } from "@/components/wallet/restore-dialog"
+import { useMediaQuery } from "@/hooks/use-media-query"
+import { useWallet } from "@/hooks/use-wallet"
+import { openBackup } from "@/lib/keys"
+import { askPasskey, passkeysAllowedHere } from "@/lib/passkey"
+import { parsePaymentRequest } from "@/lib/payment-request"
+import { registerServiceWorker, useDarkWallet } from "@/lib/pwa"
+import { storeAccount } from "@/lib/qpay"
+import { recoverWithPasskey, uploadRecovery } from "@/lib/recovery"
+import { webVault } from "@/lib/vault/web"
 
 export default function AppPage() {
-  const phone = useMediaQuery("(max-width: 767px)")
-  // Phones get the dark wallet (like the extension); desktop keeps the light one with the dark inspector.
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", phone)
-    setThemeColor(phone ? "#0c0d0f" : "#f9f7f3")
-  }, [phone])
+  // The wallet is dark everywhere, like the extension; only the landing page is light.
+  useDarkWallet()
   useEffect(registerServiceWorker, [])
   return (
     <>
@@ -70,11 +57,8 @@ function MovedBanner() {
 
 function WalletPage() {
   const w = useWallet()
-  const { deployment, account, wallet, assets, fee, names, notice, error, stage, busy, run, activity, tab, setTab, actions } = w
-  const [receiveOpen, setReceiveOpen] = useState(false)
-  const [addTokenOpen, setAddTokenOpen] = useState(false)
+  const { deployment, account, notice, error, stage, busy, actions } = w
   const [restoreOpen, setRestoreOpen] = useState(false)
-  const [inspectorOpen, setInspectorOpen] = useState(true)
   const vaultState = useVaultState(webVault)
   const phone = useMediaQuery("(max-width: 767px)")
   const [payRequest] = useState(() => (window.location.pathname.replace(/\/+$/, "") === "/pay" ? parsePaymentRequest(window.location.href) ?? undefined : undefined))
@@ -143,112 +127,36 @@ function WalletPage() {
     return <MobileWallet w={w} account={account} request={payRequest} onLock={() => void webVault.lock()} settings={settings} />
   }
 
-  const inspector = (
-    <Inspector
-      run={run}
-      tab={tab}
-      onTab={setTab}
-      busy={busy}
-      canRun={!!deployment && !!account}
-      onStress={actions.stress}
-    />
-  )
+  if (account) {
+    return <WalletDashboard w={w} onLock={() => void webVault.lock()} settings={settings} initialSend={payRequest} />
+  }
 
   return (
-    <div className="flex min-h-svh flex-col">
-      <TopBar
-        account={account}
-        inspectorOpen={inspectorOpen}
-        onLock={() => void webVault.lock()}
-        onToggleInspector={() => setInspectorOpen((o) => !o)}
-        mobileInspector={
-          <Sheet>
-            <SheetTrigger render={<Button variant="outline" size="icon-sm" className="lg:hidden" aria-label="Under the hood" />}>
-              <PanelRightOpenIcon />
-            </SheetTrigger>
-            <SheetContent side="bottom" className="dark max-h-[85svh] overflow-y-auto bg-lattice p-6">
-              <SheetHeader className="sr-only">
-                <SheetTitle>Under the hood</SheetTitle>
-              </SheetHeader>
-              {inspector}
-            </SheetContent>
-          </Sheet>
-        }
-      />
-      <div className={cn("grid flex-1", inspectorOpen && "lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]")}>
-        <main className="flex justify-center px-4 py-8 lg:px-8 lg:py-12">
-          <div className="flex w-full max-w-md flex-col gap-6">
-            {notice && (
-              <Alert>
-                <InfoIcon />
-                <AlertDescription>{notice}</AlertDescription>
-              </Alert>
-            )}
-            {error && (
-              <Alert variant="destructive">
-                <AlertCircleIcon />
-                <AlertTitle>Something went wrong</AlertTitle>
-                <AlertDescription className="break-all">{error}</AlertDescription>
-              </Alert>
-            )}
-            {account ? (
-              <>
-                <PortfolioCard
-                  assets={assets}
-                  holdings={wallet?.holdings ?? null}
-                  stake={wallet?.balances.stake ?? null}
-                  onReceive={() => setReceiveOpen(true)}
-                  onAddToken={() => setAddTokenOpen(true)}
-                />
-                <SendCard
-                  initial={payRequest}
-                  assets={assets}
-                  holdings={wallet?.holdings ?? null}
-                  fee={fee}
-                  sending={busy === "send"}
-                  disabled={!deployment || busy !== null}
-                  onSend={actions.send}
-                />
-                {run && <TransferStatus run={run} />}
-                <Activity local={activity} transfers={wallet?.transfers ?? null} names={names} />
-                {settings}
-                {deployment && (
-                  <>
-                    <ReceiveDialog
-                      open={receiveOpen}
-                      onOpenChange={setReceiveOpen}
-                      account={account}
-                      chainId={deployment.chainId}
-                      assets={assets}
-                    />
-                    <AddTokenDialog
-                      open={addTokenOpen}
-                      onOpenChange={setAddTokenOpen}
-                      onAdd={actions.addToken}
-                    />
-                  </>
-                )}
-              </>
-            ) : (
-              <>
-                <OnboardCard
-                  stage={stage}
-                  disabled={!deployment}
-                  needsVault={needsVault}
-                  onCreate={create}
-                  onRestore={() => setRestoreOpen(true)}
-                  onRecover={passkeysAllowedHere() ? recover : undefined}
-                />
-                <RestoreDialog open={restoreOpen} onOpenChange={setRestoreOpen} needsVault={needsVault} onRestore={restore} />
-              </>
-            )}
-          </div>
-        </main>
-        {inspectorOpen && (
-          <aside className="dark hidden border-l bg-lattice px-6 py-8 lg:block lg:px-10 lg:py-12">
-            <div className="sticky top-20 max-w-2xl">{inspector}</div>
-          </aside>
+    <div className="flex min-h-svh flex-col items-center justify-center gap-8 bg-background bg-lattice p-6 text-foreground">
+      <Wordmark className="text-2xl [&_svg]:size-9" />
+      <div className="flex w-full max-w-md flex-col gap-4">
+        {notice && (
+          <Alert>
+            <InfoIcon />
+            <AlertDescription>{notice}</AlertDescription>
+          </Alert>
         )}
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircleIcon />
+            <AlertTitle>Something went wrong</AlertTitle>
+            <AlertDescription className="break-all">{error}</AlertDescription>
+          </Alert>
+        )}
+        <OnboardCard
+          stage={stage}
+          disabled={!deployment}
+          needsVault={needsVault}
+          onCreate={create}
+          onRestore={() => setRestoreOpen(true)}
+          onRecover={passkeysAllowedHere() ? recover : undefined}
+        />
+        <RestoreDialog open={restoreOpen} onOpenChange={setRestoreOpen} needsVault={needsVault} onRestore={restore} />
       </div>
     </div>
   )

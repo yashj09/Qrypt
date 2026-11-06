@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react"
+import { useEffect, useSyncExternalStore } from "react"
 
 /** Registers the notification-only service worker (see public/sw.js). */
 export function registerServiceWorker() {
@@ -9,6 +9,18 @@ export function registerServiceWorker() {
 /** Sets the browser chrome colour, so the status bar matches the light site or the dark phone wallet. */
 export function setThemeColor(color: string) {
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", color)
+}
+
+/** Wallet pages are dark, like the extension; the landing page they share index.html with stays light. */
+export function useDarkWallet() {
+  useEffect(() => {
+    document.documentElement.classList.add("dark")
+    setThemeColor("#0c0d0f")
+    return () => {
+      document.documentElement.classList.remove("dark")
+      setThemeColor("#f9f7f3")
+    }
+  }, [])
 }
 
 // Chromium (Android, desktop) offers an install prompt we can trigger from a button. iOS has none: see InstallGuide.

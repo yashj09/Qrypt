@@ -1,4 +1,4 @@
-import { CheckIcon, ExternalLinkIcon, XIcon } from "lucide-react"
+import { CheckIcon, CpuIcon, ExternalLinkIcon, XIcon } from "lucide-react"
 import { motion } from "motion/react"
 import { Button } from "@/components/ui/button"
 import {
@@ -71,7 +71,8 @@ function steps(
   ]
 }
 
-export function TransferStatus({ run }: { run: Run }) {
+/** `onHood` adds a link to the full mempool and frame view. */
+export function TransferStatus({ run, onHood }: { run: Run; onHood?: () => void }) {
   const phase = runPhase(run)
   const node =
     (run.via === "stock" && endpoints.stockAltMempool) || endpoints.altMempool
@@ -154,6 +155,14 @@ export function TransferStatus({ run }: { run: Run }) {
             >
               View on the explorer
               <ExternalLinkIcon data-icon="inline-end" />
+            </Button>
+          </CardFooter>
+        )}
+        {onHood && (
+          <CardFooter>
+            <Button variant="ghost" size="sm" onClick={onHood}>
+              <CpuIcon data-icon="inline-start" />
+              See it under the hood
             </Button>
           </CardFooter>
         )}

@@ -5,6 +5,7 @@
 - Browser tab 1: https://qrypt.money (the landing page). Click **Open app** once beforehand so an account exists, then go back.
 - Browser tab 2: the explorer, open on the last transaction (link in the README).
 - Run `pnpm send` once to warm up. Check the account shows USDC and 0 ETH.
+- In the app, open **Under the hood** and press **Keep open beside wallet**, so the inspector stays beside Send (it's remembered).
 - Backup: the recorded video (`docs/media/`, made on the day).
 
 ## 0:00 to 0:30. The problem
@@ -15,7 +16,7 @@
 
 Scroll the landing page once: the hero, the four-frame diagram, and the gas bars (100k cap, 724k Falcon, 1M staked budget). Click **Open app**.
 
-Show the balance card: Falcon-512, **0 ETH**, the USDC balance, and 0.02 ETH of refundable stake. The dark panel on the right is "Under the hood": what the network sees.
+Show Portfolio: the USDC balance, the assets with **0 ETH**, and the activity. Click **Send** in the sidebar. The pinned panel on the right is "Under the hood": what the network sees.
 
 > "No ECDSA key exists for this account. Its only rule is a Falcon-512 signature, checked by code in its own VERIFY frame."
 
@@ -32,7 +33,7 @@ Read out the three gates as they fill in:
 2. **Hosted alt mempool, admitted.** "The organisers lifted all validation limits on this node mid-event. Before that it rejected us with '1,050,100 exceeds 100,000', and the explorer still has that record. Unlimited isn't a rule a public mempool can keep."
 3. **Qrypt alt mempool, admitted, then OnChain.** "Ours admits it under a bounded budget. We implemented the ERC-8421 draft's per-entity budget. The staked account gets up to 1M, and the unstaked paymaster stays under 100k. We sent it upstream as a PR."
 
-The receipt card on the left shows sent 5 USDC, fee about 0.017 USDC, and **ETH spent 0 wei**. The inspector shows the block and per-frame gas; the Frames tab now shows this transaction's measured gas against the 100k cap line.
+The status card on the left shows sent 5 USDC, fee about 0.017 USDC, and **ETH spent 0 wei**. The inspector shows the block and per-frame gas; the Frames tab now shows this transaction's measured gas against the 100k cap line.
 
 ## 2:15 to 3:00. Try to break it
 
