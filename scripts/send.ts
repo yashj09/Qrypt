@@ -8,6 +8,7 @@ import {
   signQPay,
   submitAlt,
   submitCanonical,
+  submitStock,
   waitForInclusion,
   type Verdict,
 } from "@qpay/frametx";
@@ -60,6 +61,7 @@ async function main() {
   console.log(`frame tx ${frameTxHash(signed)}`);
 
   console.log(`canonical mempool  ${show(await submitCanonical(endpoints, signed))}`);
+  console.log(`stock alt mempool  ${show(await submitStock(endpoints, signed))}`);
   const alt = await submitAlt(endpoints, signed);
   console.log(`alt mempool        ${show(alt)}`);
   if (!alt.accepted) process.exit(TAMPER ? 0 : 1);

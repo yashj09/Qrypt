@@ -15,6 +15,7 @@ import {
   statusOf,
   toAlt,
   toCanonical,
+  toStock,
   usdcBalance,
   type Balances,
   type Deployment,
@@ -60,6 +61,9 @@ export function App() {
       setRun(current)
       const canonical = await toCanonical(p)
       current = { ...current, canonical }
+      setRun(current)
+      const stock = await toStock(p)
+      current = { ...current, stock }
       setRun(current)
       const alt = await toAlt(p)
       current = { ...current, alt }

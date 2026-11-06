@@ -7,8 +7,11 @@
 - [x] Contracts: `QPayAccount` (Falcon VERIFY, stakes in its constructor), `UsdcPaymaster` (introspects the repay frame, immutable price), `MockUSDC`.
 - [x] `@qpay/frametx`: builder for the 4-frame transaction, fee quote, Falcon signing hook, and canonical and alt-mempool clients.
 - [x] Sidecar fork: ERC-8421 BUDGET-010 per-entity validation budgets (lives in the sidecar fork, not this repo).
-- [ ] Local devnet: Kurtosis is blocked on the `/var/run/docker.sock` symlink, which needs sudo.
-- [ ] S1: the helper opcodes read the signature hash and signature correctly (needs a live chain).
-- [ ] End-to-end send on the devnet.
-- [ ] App.
+- [x] Hosted devnet was reset at about 12:00 IST and came back up. Contracts are deployed on it (chain 1337, `deployments/1337.json`).
+- [x] Our BUDGET-010 sidecar runs against the hosted ethrex and relays through `ethrex_submitPrivilegedFrameTransaction`.
+- [x] S1 and S3 were proven by the real end-to-end run. The Falcon VERIFY frame ran onchain using 678k–722k gas.
+- [x] End-to-end send: canonical rejected, stock alt mempool rejected, ours admitted, OnChain, and the account's ETH stayed at 0 (`pnpm send`).
+- [x] Failure paths: a tampered signature fails at frame 0 with `BadFalconSignature()`, and an underpaid fee fails at frame 1 with `FeeTooLow`. Nothing is charged.
+- [x] App: the browser signs with Falcon (about 3–7 ms), shows three live gates, a status timeline and balance deltas. Driven in a real browser.
+- [ ] Local Kurtosis devnet as insurance. The amd64 ethrex image hangs under Rosetta, so a native arm64 image build is running.
 - [ ] README, demo video, submission.

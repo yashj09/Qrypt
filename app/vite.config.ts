@@ -5,11 +5,12 @@ import { defineConfig } from "vite"
 
 const NODE_RPC = process.env.QPAY_NODE_RPC ?? "http://127.0.0.1:32002"
 const ALT_RPC = process.env.QPAY_ALT_RPC ?? "http://127.0.0.1:14337/rpc/"
+const STOCK_RPC = process.env.QPAY_STOCK_RPC ?? "https://altmempoolgateway.forshtat.com/rpc"
 
-const proxyTo = (target: string) => ({
-  target,
+const proxyTo = (url: string) => ({
+  target: new URL(url).origin,
   changeOrigin: true,
-  rewrite: () => new URL(target).pathname,
+  rewrite: () => new URL(url).pathname,
 })
 
 export default defineConfig({
@@ -21,6 +22,6 @@ export default defineConfig({
   },
   server: {
     fs: { allow: [resolve(import.meta.dirname, "..")] },
-    proxy: { "/node": proxyTo(NODE_RPC), "/alt": proxyTo(ALT_RPC) },
+    proxy: { "/rpc/node": proxyTo(NODE_RPC), "/rpc/alt": proxyTo(ALT_RPC), "/rpc/stock": proxyTo(STOCK_RPC) },
   },
 })

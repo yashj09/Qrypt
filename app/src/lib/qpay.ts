@@ -8,6 +8,7 @@ import {
   signQPay,
   submitAlt,
   submitCanonical,
+  submitStock,
   altStatus,
   type Endpoints,
   type Verdict,
@@ -16,7 +17,7 @@ import type { FrameTx } from "@forshtat/hegota-support/tx"
 
 /** Both RPCs go through the Vite dev server proxy (see vite.config.ts), so the browser never needs CORS. */
 const origin = typeof window === "undefined" ? "http://localhost" : window.location.origin
-export const endpoints: Endpoints = { node: `${origin}/node`, altMempool: `${origin}/alt` }
+export const endpoints: Endpoints = { node: `${origin}/rpc/node`, altMempool: `${origin}/rpc/alt`, stockAltMempool: `${origin}/rpc/stock` }
 
 export interface Deployment {
   chainId: number
@@ -133,5 +134,6 @@ export async function prepare(d: Deployment, recipient: Address, amount: bigint,
 }
 
 export const toCanonical = (p: Prepared): Promise<Verdict> => submitCanonical(endpoints, p.tx)
+export const toStock = (p: Prepared): Promise<Verdict> => submitStock(endpoints, p.tx)
 export const toAlt = (p: Prepared): Promise<Verdict> => submitAlt(endpoints, p.tx)
 export const statusOf = (hash: Hex) => altStatus(endpoints, hash)

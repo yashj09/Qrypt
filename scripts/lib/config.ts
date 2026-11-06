@@ -10,6 +10,7 @@ export const STATE_DIR = resolve(ROOT, ".qpay");
 export const endpoints: Endpoints = {
   node: process.env.QPAY_NODE_RPC ?? "http://127.0.0.1:32002",
   altMempool: process.env.QPAY_ALT_RPC ?? "http://127.0.0.1:14337/rpc/",
+  stockAltMempool: process.env.QPAY_STOCK_RPC ?? "https://altmempoolgateway.forshtat.com/rpc",
 };
 
 /** Devnet genesis key, published on purpose in the sidecar repo and shared by everyone; only used to fund ours. */

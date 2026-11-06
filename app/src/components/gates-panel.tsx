@@ -14,6 +14,7 @@ export interface Run {
   fee: bigint
   signMs: number
   canonical?: Verdict
+  stock?: Verdict
   alt?: Verdict
   status?: string
   delta?: { recipient: bigint; paymaster: bigint; senderEth: bigint }
@@ -39,8 +40,9 @@ export function GatesPanel({ run }: { run: Run | null }) {
               <Badge variant="outline">Falcon sign {run.signMs.toFixed(0)} ms</Badge>
               {run.scenario !== "send" && <Badge variant="destructive">{run.scenario === "tamper" ? "tampered signature" : "underpaid fee"}</Badge>}
             </div>
-            <Gate title="Canonical mempool (EIP-8141)" verdict={run.canonical} />
-            <Gate title="Alt mempool (ERC-8421, BUDGET-010)" verdict={run.alt} />
+            <Gate title="Canonical mempool (EIP-8141, 100k cap)" verdict={run.canonical} />
+            <Gate title="Stock alt mempool (flat 100k cap)" verdict={run.stock} />
+            <Gate title="Q-Pay alt mempool (ERC-8421 BUDGET-010)" verdict={run.alt} />
             {run.alt?.accepted && (
               <>
                 <Separator />
