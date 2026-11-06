@@ -1,6 +1,7 @@
 import type { Address, Hex } from "viem"
 import type { Verdict } from "@qpay/frametx"
-import type { Inclusion, Scenario } from "@/lib/qpay"
+import type { Call, FrameLabel, Inclusion, Scenario } from "@/lib/qpay"
+import type { Asset } from "@/lib/assets"
 
 export type MempoolKey = "canonical" | "stock" | "alt"
 
@@ -10,26 +11,36 @@ export const MEMPOOLS: { key: MempoolKey; name: string; rule: string }[] = [
   { key: "alt", name: "Eyrie alt mempool", rule: "ERC-8421 BUDGET-010 · 1M gas for staked entities" },
 ]
 
+/** What the user asked for: a title for humans, the calls for the chain, and the transfer to watch, if any. */
+export interface Intent {
+  title: string
+  calls: Call[]
+  transfer?: { asset: Asset; recipient: Address; amount: bigint }
+}
+
 export interface Run {
   scenario: Scenario
   hash: Hex
-  recipient: Address
-  amount: bigint
+  title: string
+  transfer?: Intent["transfer"]
+  frames: FrameLabel[]
   fee: bigint
   signMs: number
   at: number
   verdicts: Partial<Record<MempoolKey, Verdict>>
   via?: "alt" | "stock"
   status?: string
-  delta?: { recipient: bigint; paymaster: bigint; senderEth: bigint }
+  /** Balance changes after inclusion. `gasEth` is the sender's ETH change not explained by an ETH transfer. */
+  delta?: { recipient?: bigint; paymaster: bigint; gasEth: bigint }
   included?: Inclusion
 }
 
-export type RunPhase = "submitting" | "pending" | "included" | "rejected" | "reverted"
+export type RunPhase = "submitting" | "pending" | "included" | "rejected" | "reverted" | "dropped"
 
 export function runPhase(r: Run): RunPhase {
   if (r.status === "OnChain") return "included"
   if (r.status === "Reverted") return "reverted"
+  if (r.status === "Cancelled") return "dropped"
   const answered = MEMPOOLS.every((m) => r.verdicts[m.key])
   const admitted = MEMPOOLS.some((m) => r.verdicts[m.key]?.accepted)
   if (answered && !admitted) return "rejected"
@@ -42,6 +53,7 @@ export const PHASE_BADGE: Record<RunPhase, { label: string; variant: "success" |
   included: { label: "Complete", variant: "success" },
   rejected: { label: "Rejected", variant: "destructive" },
   reverted: { label: "Reverted", variant: "destructive" },
+  dropped: { label: "Dropped", variant: "destructive" },
 }
 
 export const SCENARIO_LABEL: Record<Scenario, string> = {
@@ -50,12 +62,11 @@ export const SCENARIO_LABEL: Record<Scenario, string> = {
   underpay: "Underpaid fee",
 }
 
-/** What the activity list keeps between visits. Amounts are strings because JSON has no bigint. */
+/** What the activity list keeps between visits. */
 export interface ActivityEntry {
   hash: Hex
   scenario: Scenario
-  recipient: Address
-  amount: string
+  title: string
   phase: RunPhase
   via?: "alt" | "stock"
   block?: string
@@ -65,8 +76,7 @@ export interface ActivityEntry {
 export const toActivity = (r: Run): ActivityEntry => ({
   hash: r.hash,
   scenario: r.scenario,
-  recipient: r.recipient,
-  amount: r.amount.toString(),
+  title: r.title,
   phase: runPhase(r),
   via: r.via,
   block: r.included?.block.toString(),

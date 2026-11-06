@@ -6,12 +6,40 @@ import type { Run } from "@/lib/run"
 
 const pct = (n: bigint) => Math.min(100, (Number(n) / Number(STAKED_VERIFY_BUDGET)) * 100)
 
+interface Row {
+  mode: "VERIFY" | "SENDER"
+  name: string
+  runsAs: string
+  does?: string
+  gasUsed?: bigint
+  canonicalIssue?: string
+}
+
+/** The first three frames are fixed; after them come the run's own calls, which we only know by label. */
+function rows(run: Run | null): Row[] {
+  if (!run) return FRAMES.map((f) => ({ ...f, gasUsed: f.expectedGas }))
+  return run.frames.map((f, i) => ({
+    mode: f.mode,
+    name: f.label,
+    runsAs: FRAMES[i]?.runsAs ?? "Your account",
+    does: i < 3 ? FRAMES[i].does : undefined,
+    canonicalIssue: i < 2 ? FRAMES[i].canonicalIssue : undefined,
+    gasUsed: run.included?.frameGas[i],
+  }))
+}
+
 export function Frames({ run }: { run: Run | null }) {
   const measured = run?.included
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-        <span>{measured ? `Measured onchain in block ${measured.block}` : `Measured onchain in block ${proof.block}`}</span>
+        <span>
+          {measured
+            ? `Measured onchain in block ${measured.block}`
+            : run
+              ? "Gas appears once the transaction is included"
+              : `Measured onchain in block ${proof.block}`}
+        </span>
         <span className="flex items-center gap-3">
           <span className="flex items-center gap-1.5">
             <span className="size-2 rounded-full bg-muted-foreground" /> within 100k cap
@@ -22,26 +50,23 @@ export function Frames({ run }: { run: Run | null }) {
         </span>
       </div>
       <ItemGroup>
-        {FRAMES.map((f, i) => {
-          const gasUsed = measured?.frameGas[i] ?? f.expectedGas
-          return (
-            <Item key={f.name} variant="outline">
-              <ItemContent className="gap-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-mono text-xs text-muted-foreground">{i}</span>
-                  <Badge variant={f.mode === "VERIFY" ? "default" : "secondary"} className="font-mono">
-                    {f.mode}
-                  </Badge>
-                  <ItemTitle>{f.name}</ItemTitle>
-                  <span className="text-xs text-muted-foreground">{f.runsAs}</span>
-                </div>
-                <ItemDescription className={f.mode === "SENDER" ? "font-mono text-xs" : undefined}>{f.does}</ItemDescription>
-                <GasBar gasUsed={gasUsed} />
-                {f.canonicalIssue && <span className="text-xs text-destructive">Canonical mempool: {f.canonicalIssue}</span>}
-              </ItemContent>
-            </Item>
-          )
-        })}
+        {rows(run).map((f, i) => (
+          <Item key={`${i}-${f.name}`} variant="outline">
+            <ItemContent className="gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-mono text-xs text-muted-foreground">{i}</span>
+                <Badge variant={f.mode === "VERIFY" ? "default" : "secondary"} className="font-mono">
+                  {f.mode}
+                </Badge>
+                <ItemTitle>{f.name}</ItemTitle>
+                <span className="text-xs text-muted-foreground">{f.runsAs}</span>
+              </div>
+              {f.does && <ItemDescription className={f.mode === "SENDER" ? "font-mono text-xs" : undefined}>{f.does}</ItemDescription>}
+              {f.gasUsed !== undefined && <GasBar gasUsed={f.gasUsed} />}
+              {f.canonicalIssue && <span className="text-xs text-destructive">Canonical mempool: {f.canonicalIssue}</span>}
+            </ItemContent>
+          </Item>
+        ))}
       </ItemGroup>
     </div>
   )

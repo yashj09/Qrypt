@@ -12,6 +12,7 @@ import { SendCard } from "@/components/wallet/send-card"
 import { TopBar } from "@/components/wallet/top-bar"
 import { TransferStatus } from "@/components/wallet/transfer-status"
 import { cn } from "@/lib/utils"
+import { short, usdcAmount } from "@/lib/format"
 import {
   client,
   createAccount,
@@ -19,7 +20,8 @@ import {
   forgetAccount,
   inclusion,
   loadDeployment,
-  prepare,
+  prepareCalls,
+  usdcPayment,
   readBalances,
   statusOf,
   storedAccount,
@@ -32,7 +34,8 @@ import {
   type OnboardStage,
   type Scenario,
 } from "@/lib/qpay"
-import { loadActivity, saveActivity, toActivity, type ActivityEntry, type Run } from "@/lib/run"
+import { balanceOf, usdcAsset } from "@/lib/assets"
+import { loadActivity, saveActivity, toActivity, type ActivityEntry, type Intent, type Run } from "@/lib/run"
 
 const STRESS_RECIPIENT: Address = "0x000000000000000000000000000000000000dEaD"
 const STRESS_AMOUNT = 1_000_000n
@@ -49,7 +52,10 @@ export default function AppPage() {
   const [inspectorOpen, setInspectorOpen] = useState(true)
   const [tab, setTab] = useState<InspectorTab>("mempools")
 
-  const fee = useMemo(() => (deployment && account ? estimateFee(deployment, account) : null), [deployment, account])
+  const fee = useMemo(
+    () => (deployment && account ? estimateFee(deployment, account, [usdcPayment(deployment, account, 0n)]) : null),
+    [deployment, account],
+  )
   const refresh = useCallback(async (d: Deployment, a: Address) => setBalances(await readBalances(d, a)), [])
 
   const selectAccount = (a: Address | null) => {
@@ -105,7 +111,7 @@ export default function AppPage() {
     })
   }
 
-  const onRun = async (scenario: Scenario, recipient: Address, amount: bigint) => {
+  const onRun = async (scenario: Scenario, intent: Intent) => {
     if (!deployment || !account) return
     setBusy(scenario)
     setError(null)
@@ -115,14 +121,25 @@ export default function AppPage() {
       current = { ...current!, ...patch }
       setRun(current)
     }
+    const t = intent.transfer
     try {
       const before = {
-        recipient: await usdcBalance(deployment, recipient),
+        recipient: t ? await balanceOf(t.asset, t.recipient) : undefined,
         paymaster: await usdcBalance(deployment, deployment.paymaster),
         senderEth: await client.getBalance({ address: account }),
       }
-      const p = await prepare(deployment, account, recipient, amount, scenario)
-      current = { scenario, hash: p.hash, recipient, amount, fee: p.fee, signMs: p.signMs, at: Date.now(), verdicts: {} }
+      const p = await prepareCalls(deployment, account, intent.calls, scenario)
+      current = {
+        scenario,
+        hash: p.hash,
+        title: intent.title,
+        transfer: t,
+        frames: p.frames,
+        fee: p.fee,
+        signMs: p.signMs,
+        at: Date.now(),
+        verdicts: {},
+      }
       setRun(current)
       const canonical = await toCanonical(p)
       update({ verdicts: { canonical } })
@@ -136,15 +153,16 @@ export default function AppPage() {
         for (let i = 0; i < 60; i++) {
           const status = await statusOf(p.hash, via).catch(() => current!.status)
           update({ status })
-          if (status === "OnChain" || status === "Reverted") break
+          if (status === "OnChain" || status === "Reverted" || status === "Cancelled") break
           await new Promise((r) => setTimeout(r, 1500))
         }
         if (current!.status === "OnChain") {
+          const ethSent = t?.asset.kind === "eth" ? t.amount : 0n
           update({
             delta: {
-              recipient: (await usdcBalance(deployment, recipient)) - before.recipient,
+              recipient: t && before.recipient !== undefined ? (await balanceOf(t.asset, t.recipient)) - before.recipient : undefined,
               paymaster: (await usdcBalance(deployment, deployment.paymaster)) - before.paymaster,
-              senderEth: (await client.getBalance({ address: account })) - before.senderEth,
+              gasEth: (await client.getBalance({ address: account })) - before.senderEth + ethSent,
             },
             included: await inclusion(p.hash).catch(() => undefined),
           })
@@ -166,7 +184,13 @@ export default function AppPage() {
       onTab={setTab}
       busy={busy}
       canRun={!!deployment && !!account}
-      onStress={(s) => onRun(s, STRESS_RECIPIENT, STRESS_AMOUNT)}
+      onStress={(s) =>
+        deployment &&
+        onRun(s, {
+          title: s === "tamper" ? "Tampered signature" : "Underpaid fee",
+          calls: [usdcPayment(deployment, STRESS_RECIPIENT, STRESS_AMOUNT)],
+        })
+      }
     />
   )
 
@@ -208,7 +232,14 @@ export default function AppPage() {
                   fee={fee}
                   sending={busy === "send"}
                   disabled={!deployment || busy !== null}
-                  onSend={(recipient, amount) => onRun("send", recipient, amount)}
+                  onSend={(recipient, amount) =>
+                    deployment &&
+                    onRun("send", {
+                      title: `${usdcAmount(amount)} USDC to ${short(recipient, 4)}`,
+                      calls: [usdcPayment(deployment, recipient, amount)],
+                      transfer: { asset: usdcAsset(deployment), recipient, amount },
+                    })
+                  }
                 />
                 {run && <TransferStatus run={run} />}
                 <Activity entries={activity} />

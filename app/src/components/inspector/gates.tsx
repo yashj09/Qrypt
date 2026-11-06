@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator"
 import { Spinner } from "@/components/ui/spinner"
 import { MEMPOOLS, SCENARIO_LABEL, runPhase, type Run } from "@/lib/run"
 import { short, usdc } from "@/lib/format"
+import { formatAsset } from "@/lib/assets"
 
 const LIFECYCLE = ["New", "Pending", "Submitted", "OnChain"] as const
 
@@ -39,8 +40,10 @@ export function Gates({ run }: { run: Run | null }) {
           <Separator />
           <dl className="grid grid-cols-2 gap-4 text-sm">
             <Stat label="Included in block" value={run.included.block.toString()} />
-            <Stat label="Your ETH changed by" value={`${run.delta.senderEth.toString()} wei`} />
-            <Stat label="Recipient received" value={usdc(run.delta.recipient)} />
+            <Stat label="ETH spent on gas" value={`${(-run.delta.gasEth).toString()} wei`} />
+            {run.transfer && run.delta.recipient !== undefined && (
+              <Stat label="Recipient received" value={formatAsset(run.transfer.asset, run.delta.recipient)} />
+            )}
             <Stat label="Paymaster repaid" value={usdc(run.delta.paymaster)} />
           </dl>
         </>

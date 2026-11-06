@@ -8,48 +8,57 @@ const FRAME_TX_INTRINSIC_GAS = 12_000n;
 const PER_FRAME_GAS = 475n;
 const CALLDATA_GAS_PER_BYTE = 16n;
 
-export interface GasLimits {
-  falconVerify: bigint;
-  paymasterVerify: bigint;
-  repay: bigint;
-  repayState: bigint;
-  payment: bigint;
-  paymentState: bigint;
+export interface FrameGas {
+  execution: bigint;
+  state: bigint;
 }
 
-export const defaultGas: GasLimits = {
+/** Amsterdam state gas: a SENDER frame that writes fresh storage needs both budgets. */
+export const defaultGas = {
   falconVerify: 950_000n,
   paymasterVerify: 100_000n,
-  repay: 150_000n,
-  repayState: 250_000n,
-  payment: 150_000n,
-  paymentState: 250_000n,
+  repay: { execution: 150_000n, state: 250_000n } as FrameGas,
+  call: { execution: 300_000n, state: 250_000n } as FrameGas,
+  transfer: { execution: 150_000n, state: 250_000n } as FrameGas,
 };
 
-export interface QPayParams {
+/** One SENDER frame: the account calls `to` with `data` and `value`. */
+export interface Call {
+  to: Address;
+  data?: Hex;
+  value?: bigint;
+  label: string;
+  gas?: FrameGas;
+}
+
+export interface FrameLabel {
+  mode: "VERIFY" | "SENDER";
+  label: string;
+}
+
+export interface WalletTxParams {
   chainId: bigint;
   account: Address;
   paymaster: Address;
   usdc: Address;
-  recipient: Address;
-  amount: bigint;
+  calls: Call[];
   nonceSeq: bigint;
   maxFeePerGas: bigint;
   maxPriorityFeePerGas?: bigint;
   /** USDC base units per 1 ETH, mirroring the paymaster's immutable price. */
   usdcPerEth: bigint;
-  gas?: Partial<GasLimits>;
   /** Pays this many USDC base units instead of the quote; used to show the paymaster refusing an underpayment. */
   feeOverride?: bigint;
 }
 
-export interface UnsignedQPay {
+export interface UnsignedWalletTx {
   tx: FrameTx;
   fee: bigint;
+  frames: FrameLabel[];
   maxCostUpperBound: bigint;
 }
 
-const transfer = (to: Address, amount: bigint): Hex =>
+export const erc20Transfer = (to: Address, amount: bigint): Hex =>
   encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [to, amount] });
 
 /** Upper bound on `max_cost` for the given frames; the paymaster's own quote must not exceed what we pay. */
@@ -66,11 +75,12 @@ export const quoteUsdc = (maxCostWei: bigint, usdcPerEth: bigint) =>
 export const FALCON_SIG_BYTES = 1064;
 
 /**
- * Four frames: the account's Falcon check, the paymaster's approval, the USDC repayment, and the payment.
+ * The account's Falcon check, the paymaster's approval, the USDC repayment, then one SENDER frame per call.
+ * The paymaster only inspects the frame right after it, so the calls can be anything the account may do.
  * The Falcon signature goes in an ARBITRARY entry with an empty `msg`, so it is elided from the signature hash.
  */
-export function buildQPayTx(p: QPayParams): UnsignedQPay {
-  const gas = { ...defaultGas, ...p.gas };
+export function buildWalletTx(p: WalletTxParams): UnsignedWalletTx {
+  if (p.calls.length === 0) throw new Error("a wallet transaction needs at least one call");
   const build = (fee: bigint) =>
     newTx({
       chainId: p.chainId,
@@ -78,28 +88,38 @@ export function buildQPayTx(p: QPayParams): UnsignedQPay {
       nonceSeq: p.nonceSeq,
       fees: { maxFeePerGas: p.maxFeePerGas, maxPriorityFeePerGas: p.maxPriorityFeePerGas ?? p.maxFeePerGas },
       frames: [
-        frame(profile, "VERIFY", { target: null, execution: gas.falconVerify, scope: "EXECUTION" }),
-        frame(profile, "VERIFY", { target: p.paymaster, execution: gas.paymasterVerify, scope: "PAYMENT" }),
-        frame(profile, "SENDER", {
-          target: p.usdc,
-          execution: gas.repay,
-          state: gas.repayState,
-          data: transfer(p.paymaster, fee),
-        }),
-        frame(profile, "SENDER", {
-          target: p.usdc,
-          execution: gas.payment,
-          state: gas.paymentState,
-          data: transfer(p.recipient, p.amount),
-        }),
+        frame(profile, "VERIFY", { target: null, execution: defaultGas.falconVerify, scope: "EXECUTION" }),
+        frame(profile, "VERIFY", { target: p.paymaster, execution: defaultGas.paymasterVerify, scope: "PAYMENT" }),
+        frame(profile, "SENDER", { target: p.usdc, ...defaultGas.repay, data: erc20Transfer(p.paymaster, fee) }),
+        ...p.calls.map((c) =>
+          frame(profile, "SENDER", { target: c.to, ...(c.gas ?? defaultGas.call), value: c.value ?? 0n, data: c.data ?? "0x" }),
+        ),
       ],
       signatures: [{ scheme: sigScheme(profile, "ARBITRARY"), signer: "0x", msg: "0x", signature: "0x" }],
     });
   const draft = build(0n);
   const bound = maxCostUpperBound(draft, FALCON_SIG_BYTES);
   const fee = p.feeOverride ?? quoteUsdc(bound, p.usdcPerEth);
-  return { tx: build(fee), fee, maxCostUpperBound: bound };
+  const frames: FrameLabel[] = [
+    { mode: "VERIFY", label: "Falcon signature check" },
+    { mode: "VERIFY", label: "USDC paymaster" },
+    { mode: "SENDER", label: "Repay gas in USDC" },
+    ...p.calls.map((c) => ({ mode: "SENDER" as const, label: c.label })),
+  ];
+  return { tx: build(fee), fee, frames, maxCostUpperBound: bound };
 }
+
+export interface QPayParams extends Omit<WalletTxParams, "calls"> {
+  recipient: Address;
+  amount: bigint;
+}
+
+/** The original payment: one USDC transfer. */
+export const buildQPayTx = ({ recipient, amount, ...p }: QPayParams): UnsignedWalletTx =>
+  buildWalletTx({
+    ...p,
+    calls: [{ to: p.usdc, data: erc20Transfer(recipient, amount), label: "Payment", gas: defaultGas.transfer }],
+  });
 
 export type FalconSign = (digest: Uint8Array) => Promise<Uint8Array> | Uint8Array;
 

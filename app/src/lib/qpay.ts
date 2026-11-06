@@ -1,7 +1,9 @@
 import { createPublicClient, erc20Abi, http, type Address, type Hex } from "viem"
 import { falconFromSeed } from "@qpay/falcon"
 import {
-  buildQPayTx,
+  buildWalletTx,
+  defaultGas,
+  erc20Transfer,
   bytesToHex,
   frameTxHash,
   hexToBytes,
@@ -10,7 +12,9 @@ import {
   submitCanonical,
   submitStock,
   altStatus,
+  type Call,
   type Endpoints,
+  type FrameLabel,
   type Verdict,
 } from "@qpay/frametx"
 import type { FrameTx } from "@forshtat/hegota-support/tx"
@@ -134,6 +138,8 @@ export async function readBalances(d: Deployment, who: Address): Promise<Balance
 export const usdcBalance = (d: Deployment, who: Address) =>
   client.readContract({ address: d.usdc, abi: erc20Abi, functionName: "balanceOf", args: [who] })
 
+export type { Call, FrameLabel }
+
 export type Scenario = "send" | "tamper" | "underpay"
 
 export interface Prepared {
@@ -141,52 +147,37 @@ export interface Prepared {
   hash: Hex
   fee: bigint
   signMs: number
+  frames: FrameLabel[]
 }
 
 const FEE_CAPS = { maxFeePerGas: 3_000_000n, maxPriorityFeePerGas: 2_000_000n }
 
-/** The USDC fee the paymaster will ask for. It depends only on the gas limits and fee caps, so nothing is signed. */
-export const estimateFee = (d: Deployment, account: Address): bigint =>
-  buildQPayTx({
-    chainId: BigInt(d.chainId),
-    account,
-    paymaster: d.paymaster,
-    usdc: d.usdc,
-    recipient: account,
-    amount: 0n,
-    nonceSeq: 0n,
-    ...FEE_CAPS,
-    usdcPerEth: BigInt(d.usdcPerEth),
-  }).fee
+/** The paymaster's quote depends only on the frames' gas limits and the fee caps, so nothing is signed. */
+export const estimateFee = (d: Deployment, account: Address, calls: Call[]): bigint =>
+  buildWalletTx({ ...txBase(d, account, 0n), calls }).fee
 
-export async function prepare(d: Deployment, account: Address, recipient: Address, amount: bigint, scenario: Scenario): Promise<Prepared> {
-  const nonceSeq = BigInt(await client.getTransactionCount({ address: account }))
-  const quoted = buildQPayTx({
-    chainId: BigInt(d.chainId),
-    account,
-    paymaster: d.paymaster,
-    usdc: d.usdc,
-    recipient,
-    amount,
-    nonceSeq,
-    ...FEE_CAPS,
-    usdcPerEth: BigInt(d.usdcPerEth),
-  })
-  const { tx, fee } =
-    scenario === "underpay"
-      ? buildQPayTx({
-          chainId: BigInt(d.chainId),
-          account,
-          paymaster: d.paymaster,
-          usdc: d.usdc,
-          recipient,
-          amount,
-          nonceSeq,
-          ...FEE_CAPS,
-          usdcPerEth: BigInt(d.usdcPerEth),
-          feeOverride: quoted.fee / 10n,
-        })
-      : quoted
+const txBase = (d: Deployment, account: Address, nonceSeq: bigint) => ({
+  chainId: BigInt(d.chainId),
+  account,
+  paymaster: d.paymaster,
+  usdc: d.usdc,
+  nonceSeq,
+  ...FEE_CAPS,
+  usdcPerEth: BigInt(d.usdcPerEth),
+})
+
+export const usdcPayment = (d: Deployment, recipient: Address, amount: bigint): Call => ({
+  to: d.usdc,
+  data: erc20Transfer(recipient, amount),
+  label: "Payment",
+  gas: defaultGas.transfer,
+})
+
+/** Builds and Falcon-signs a transaction for `calls`. The stress-test scenarios break it in one specific way. */
+export async function prepareCalls(d: Deployment, account: Address, calls: Call[], scenario: Scenario = "send"): Promise<Prepared> {
+  const base = txBase(d, account, BigInt(await client.getTransactionCount({ address: account })))
+  const quoted = buildWalletTx({ ...base, calls })
+  const { tx, fee, frames } = scenario === "underpay" ? buildWalletTx({ ...base, calls, feeOverride: quoted.fee / 10n }) : quoted
   const signer = browserSigner()
   const started = performance.now()
   let signed = await signQPay(tx, (digest) => signer.sign(digest))
@@ -196,7 +187,7 @@ export async function prepare(d: Deployment, account: Address, recipient: Addres
     sig[100] ^= 0x01
     signed = { ...signed, signatures: [{ ...signed.signatures[0], signature: bytesToHex(sig) }] }
   }
-  return { tx: signed, hash: frameTxHash(signed), fee, signMs }
+  return { tx: signed, hash: frameTxHash(signed), fee, signMs, frames }
 }
 
 export const toCanonical = (p: Prepared): Promise<Verdict> => submitCanonical(endpoints, p.tx)

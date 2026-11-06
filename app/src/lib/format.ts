@@ -12,3 +12,5 @@ export const ago = (at: number) => {
   if (s < 3600) return `${Math.floor(s / 60)} min ago`
   return `${Math.floor(s / 3600)} h ago`
 }
+export const units = (v: bigint, decimals: number) =>
+  Number(formatUnits(v, decimals)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: decimals > 6 ? 6 : 4 })
