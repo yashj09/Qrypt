@@ -60,6 +60,15 @@ The local chain also starts before Hegota: wait for block 64. There is no stock 
 | Our BUDGET-010 sidecar | Laptop: `./devnet/sidecar.sh`, exposed with `cloudflared tunnel --url http://127.0.0.1:14337` |
 | Vercel env | `ONBOARD_KEY` (devnet operator key = `.qpay/deployer.hex`), `QPAY_FACTORY`, `QPAY_NODE_RPC`, `VITE_ALT_RPC` (tunnel URL + `/rpc/`) |
 
+**Keep the sidecar and tunnel running as detached processes,** so closing a terminal or an agent session doesn't kill them:
+
+```sh
+QPAY_NODE_RPC=https://altmempool.forshtat.com nohup ./devnet/sidecar.sh > .qpay/sidecar.log 2>&1 < /dev/null & disown
+nohup cloudflared tunnel --no-autoupdate --url http://127.0.0.1:14337 > .qpay/tunnel.log 2>&1 < /dev/null & disown
+```
+
+To check them: `ps -ax | grep -E "skandha.js node|cloudflared tunnel --no-autoupdate --url"`. Keep the laptop awake with `caffeinate -dimsu &`.
+
 **If the tunnel restarts,** its URL changes. Point the app at the new URL and redeploy (about 1 minute):
 
 ```sh
