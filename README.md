@@ -11,6 +11,38 @@ A brand-new account that holds only USDC sends a payment. A **Falcon-512** signa
 
 Built at ETHGlobal Mumbai 2026 for the Ethereum Foundation "Best use of the Frame Transaction Alternative Mempool" prize. Its brief names PQ-secure smart wallets and ERC-20 paymasters. Q-Pay does both in one transaction.
 
+![Q-Pay app: three live mempool gates, the transaction included onchain, and per-frame gas](docs/media/app.png)
+
+## Proof it runs on the public devnet
+
+| | |
+|---|---|
+| Transaction | `0x18bde9fdb212daad6c5f197d13e0e84d67766b92d56e5d4b4e399832b8ad9c3b`, included in **block 726** of the public alt-mempool devnet (chain 1337), status success |
+| Admitted by | our ERC-8421 sidecar with BUDGET-010: [fork branch](https://github.com/yashj09/mempool-workshop-sidecar/tree/budget-010), [upstream PR](https://github.com/forshtat/mempool-workshop-sidecar/pull/2) |
+| Rejected by the stock alt mempool | [explorer record on the official Gateway node](https://explorer.altmempool.wtf/tx/0x18bde9fdb212daad6c5f197d13e0e84d67766b92d56e5d4b4e399832b8ad9c3b?node=https%3A%2F%2Faltmempoolgateway.forshtat.com%2Frpc): `1050100 exceeds MAX_VERIFY_GAS 100000` ([screenshot](docs/media/explorer-stock-rejection.png)) |
+| Rejected by the canonical mempool | ethrex: `Frame transaction prefix gas budget (frames + sig cost) exceeds MAX_VERIFY_GAS` |
+
+Check the receipt yourself:
+
+```sh
+cast receipt 0x18bde9fdb212daad6c5f197d13e0e84d67766b92d56e5d4b4e399832b8ad9c3b --rpc-url https://altmempool.forshtat.com
+```
+
+The devnet can be reset at any time. If it has been, `pnpm setup` and `pnpm send` reproduce the result in a few minutes; see [docs/runbook.md](docs/runbook.md).
+
+### Measured numbers
+
+| What | Value |
+|---|---|
+| Frame 0, Falcon-512 VERIFY (account, staked) | 676k–724k gas, 6.8–7.2x the canonical 100k cap. The cost varies per signature |
+| Frame 1, paymaster VERIFY (unstaked) | 27,922 gas, inside the unstaked 100k budget |
+| Frame 2, repay gas in USDC | 25,012 gas |
+| Frame 3, the payment | 15,012 gas |
+| Whole transaction | about 821k gas |
+| Gas fee, paid in USDC | 0.0169 USDC at the devnet's suggested gas price (about 0.002 gwei) |
+| Falcon signing in the browser | 3–7 ms |
+| Sender's ETH before and after | 0, then 0 |
+
 ## How it works
 
 See [docs/architecture.md](docs/architecture.md) for the full picture. In short:
@@ -31,8 +63,9 @@ pnpm build:contracts && (cd contracts/falcon && forge build)
 # deploy to the public alt-mempool devnet (chain 1337)
 QPAY_NODE_RPC=https://altmempool.forshtat.com pnpm setup
 
-# run the ERC-8421 sidecar with our BUDGET-010 patch (sidecar/budget-010.patch) against that node
-QPAY_NODE_RPC=https://altmempool.forshtat.com SIDECAR_DIR=/path/to/patched/sidecar ./devnet/sidecar.sh
+# run the ERC-8421 sidecar with our BUDGET-010 patch against that node
+git clone -b budget-010 https://github.com/yashj09/mempool-workshop-sidecar ../sidecar && (cd ../sidecar && bun install && bun run build)
+QPAY_NODE_RPC=https://altmempool.forshtat.com SIDECAR_DIR=../sidecar ./devnet/sidecar.sh
 
 # end to end from the CLI
 QPAY_NODE_RPC=https://altmempool.forshtat.com pnpm send 0xRecipient 5

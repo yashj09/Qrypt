@@ -30,4 +30,6 @@ exec bun --bun packages/cli/bin/skandha.js node \
   --configFile "$DATA/config.json" --dataDir "$DATA" \
   --api.address 127.0.0.1 --api.port 14337 --api.wsPort 14337 \
   --p2p.host 127.0.0.1 --p2p.enrHost 127.0.0.1 --p2p.port 4337 --p2p.enrPort 4337 \
-  --executor.bundlingMode auto
+  --executor.bundlingMode auto \
+  --explorer.enable \
+  --api.cors "${QPAY_SIDECAR_CORS:-https://explorer.altmempool.wtf}"

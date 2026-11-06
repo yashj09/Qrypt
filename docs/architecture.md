@@ -46,7 +46,7 @@ The workshop sidecar sums every validation-prefix frame's execution limit agains
 - Every entity must stay at or under `MAX_VERIFY_GAS_STAKED_ENTITY`. The default is 1M, configurable through `SKANDHA_MAX_VERIFY_GAS_STAKED_ENTITY`.
 - An entity above `MAX_VERIFY_GAS_PER_ENTITY` (100k) must be staked: `stake ≥ minStake` and no withdrawal started.
 
-The patch is in `sidecar/budget-010.patch`, against forshtat/mempool-workshop-sidecar `2e22ff0`. It touches `validationPrefix.ts` and `validators/frameTx.ts`.
+The fork branch is [yashj09/mempool-workshop-sidecar@budget-010](https://github.com/yashj09/mempool-workshop-sidecar/tree/budget-010), sent upstream as [forshtat/mempool-workshop-sidecar#2](https://github.com/forshtat/mempool-workshop-sidecar/pull/2). The same change is in `sidecar/budget-010.patch`, against `2e22ff0`. It touches `validationPrefix.ts`, `validators/frameTx.ts` and their unit tests.
 
 ## Trust and limits
 

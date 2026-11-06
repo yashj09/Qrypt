@@ -14,4 +14,8 @@
 - [x] Failure paths: a tampered signature fails at frame 0 with `BadFalconSignature()`, and an underpaid fee fails at frame 1 with `FeeTooLow`. Nothing is charged.
 - [x] App: the browser signs with Falcon (about 3–7 ms), shows three live gates, a status timeline and balance deltas. Driven in a real browser.
 - [x] Local devnet insurance: a native arm64 ethrex image is built (`ethrex:local-arm64`), and `devnet/up.sh` uses it.
-- [ ] README, demo video, submission.
+- [x] Sidecar fork published (`yashj09/mempool-workshop-sidecar@budget-010`) with unit tests (executor 388/388). Upstream PR: forshtat/mempool-workshop-sidecar#2.
+- [x] Explorer evidence: the official explorer shows the stock Gateway rejecting our transaction. The same transaction is onchain in block 726.
+- [x] App shows per-frame gas from the onchain receipt (Falcon VERIFY 676k–724k, 6.8–7.2x the canonical cap).
+- [x] README proof table and measured numbers, `docs/runbook.md`, `docs/demo.md`, `docs/submission.md`.
+- [ ] Demo video (you record it), slides, and the dashboard submission.
