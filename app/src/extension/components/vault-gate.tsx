@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react"
-import { LockKeyholeIcon, SparklesIcon } from "lucide-react"
+import { FingerprintIcon, LockKeyholeIcon, SparklesIcon } from "lucide-react"
 import { LogoMark } from "@/components/brand/logo"
 import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { openOnboarding } from "../mount"
-import { onVaultChange, touch, unlockWithPassword, vaultState, type VaultState } from "../vault"
+import { unlockWithTouchId } from "../touch-id"
+import { onVaultChange, touch, touchIdWrap, unlockWithPassword, vaultState, type VaultState } from "../vault"
 
 export function useVaultState(): VaultState | null {
   const [state, setState] = useState<VaultState | null>(null)
@@ -123,8 +124,34 @@ export function UnlockScreen({ extra }: { extra?: ReactNode }) {
           {working ? <Spinner data-icon="inline-start" /> : <LockKeyholeIcon data-icon="inline-start" />}
           Unlock
         </Button>
+        <TouchIdUnlock />
         {extra}
       </form>
     </Centered>
+  )
+}
+
+function TouchIdUnlock() {
+  const [available, setAvailable] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  useEffect(() => {
+    touchIdWrap().then((w) => setAvailable(!!w))
+  }, [])
+  if (!available) return null
+  return (
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => {
+          setError(null)
+          unlockWithTouchId().catch((e: Error) => setError(e.message))
+        }}
+      >
+        <FingerprintIcon data-icon="inline-start" />
+        Unlock with Touch ID
+      </Button>
+      {error && <p className="text-sm text-destructive">{error}</p>}
+    </>
   )
 }

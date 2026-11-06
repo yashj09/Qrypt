@@ -60,6 +60,61 @@ async function main() {
     step(`popup sent 1 USDC, ${(await included.textContent())?.toLowerCase()}`);
     if (process.env.EYRIE_SHOTS) await popup.screenshot({ path: `${process.env.EYRIE_SHOTS}/popup-sent.png` });
 
+    await dash.goto(extensionUrl(id, "dashboard.html#portfolio"));
+    await dash.getByText("Assets").waitFor({ timeout: 30_000 });
+    await dash.waitForTimeout(2500);
+    if (process.env.EYRIE_SHOTS) await dash.screenshot({ path: `${process.env.EYRIE_SHOTS}/dashboard.png` });
+    await dash.getByRole("button", { name: "Under the hood" }).click();
+    await dash.getByText("One EIP-8141 frame transaction").waitFor();
+    if (process.env.EYRIE_SHOTS) await dash.screenshot({ path: `${process.env.EYRIE_SHOTS}/dashboard-hood.png` });
+    step("dashboard: portfolio and under the hood render");
+
+    await dash.getByRole("button", { name: "Settings" }).click();
+    await dash.getByRole("button", { name: "Rotate", exact: true }).click();
+    await dash.getByRole("button", { name: "Rotate key" }).click();
+    await dash.getByText("Key rotated").waitFor({ timeout: 90_000 });
+    step("rotated the Falcon key from settings");
+
+    await dash.getByRole("button", { name: "Back up", exact: true }).click();
+    await dash.locator("#backup-password").fill(PASSWORD);
+    await dash.locator("#backup-confirm").fill(PASSWORD);
+    const download = dash.waitForEvent("download");
+    await dash.getByRole("button", { name: "Download backup" }).click();
+    const backupPath = `${process.env.EYRIE_SHOTS ?? "/tmp"}/eyrie-e2e-backup.json`;
+    await (await download).saveAs(backupPath);
+    const account = await dash.locator("aside .font-mono").first().textContent();
+    step(`backed up the rotated key (${account})`);
+    if (process.env.EYRIE_SHOTS) await dash.screenshot({ path: `${process.env.EYRIE_SHOTS}/dashboard-settings.png` });
+
+    const second = await launchWithExtension();
+    try {
+      const onboarding =
+        second.context.pages().find((p) => p.url().includes("onboarding.html")) ??
+        (await second.context.waitForEvent("page", { predicate: (p) => p.url().includes("onboarding.html") }));
+      await onboarding.getByText("Import a backup file").click();
+      await onboarding.locator("#import-file").setInputFiles(backupPath);
+      await onboarding.locator("#import-backup-password").fill(PASSWORD);
+      await onboarding.locator("#new-password").fill(`${PASSWORD}-2`);
+      await onboarding.locator("#confirm-password").fill(`${PASSWORD}-2`);
+      await onboarding.getByRole("button", { name: "Import" }).click();
+      await onboarding.getByText("Account imported").waitFor({ timeout: 60_000 });
+      const imported = await onboarding.locator(".font-mono").first().textContent();
+      if (imported !== account) throw new Error(`imported ${imported}, expected ${account}`);
+      step(`imported the backup in a fresh browser: same account ${imported}`);
+      const popup2 = await second.context.newPage();
+      await popup2.setViewportSize({ width: 360, height: 600 });
+      await popup2.goto(extensionUrl(second.id, "popup.html"));
+      await popup2.getByRole("button", { name: "Send", exact: true }).click({ timeout: 30_000 });
+      await popup2.locator("#amount").fill("1");
+      await popup2.getByRole("button", { name: "Review USDC payment" }).click();
+      await popup2.getByRole("button", { name: "Sign and send" }).click();
+      const landed = popup2.getByText(/Included in block \d+/);
+      await landed.waitFor({ timeout: 90_000 });
+      step(`the imported, rotated key signs: ${(await landed.textContent())?.toLowerCase()}`);
+    } finally {
+      await second.context.close();
+    }
+
     const sealed = await worker.evaluate(async () => JSON.stringify(await chrome.storage.local.get("eyrie.vault")));
     if (!sealed.includes('"ct"') || /"seed":"0x[0-9a-f]{64}"/.test(sealed)) throw new Error("vault isn't sealed");
     step("the seed is stored only as AES-GCM ciphertext");

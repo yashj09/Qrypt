@@ -10,13 +10,15 @@ import { NODE_RPC, explorerTx } from "@/lib/site"
 import { ago, short } from "@/lib/format"
 
 interface Props {
+  /** Names for known contracts, e.g. the staking registry, keyed by lowercase address. */
+  names?: Record<string, string>
   /** Attempts from this browser that never landed: rejections, drops, and ones still pending. */
   local: ActivityEntry[]
   /** Token transfers in and out of the account, read from chain logs. */
   transfers: TokenTransfer[] | null
 }
 
-export function Activity({ local, transfers }: Props) {
+export function Activity({ local, transfers, names = {} }: Props) {
   const unfinished = local.filter((e) => e.phase !== "included")
   const empty = unfinished.length === 0 && transfers?.length === 0
   return (
@@ -68,7 +70,7 @@ export function Activity({ local, transfers }: Props) {
                       {incoming ? "Received" : "Sent"} {formatAsset(t.asset, t.amount)}
                     </ItemTitle>
                     <ItemDescription>
-                      {incoming ? "from" : "to"} <span className="font-mono">{short(t.counterparty, 4)}</span> · block {t.block.toString()}
+                      {incoming ? "from" : "to"} <Counterparty address={t.counterparty} names={names} /> · block {t.block.toString()}
                     </ItemDescription>
                   </ItemContent>
                   <ItemActions>
@@ -82,4 +84,9 @@ export function Activity({ local, transfers }: Props) {
       </CardContent>
     </Card>
   )
+}
+
+function Counterparty({ address, names }: { address: string; names: Record<string, string> }) {
+  const name = names[address.toLowerCase()]
+  return name ? <span>{name}</span> : <span className="font-mono">{short(address, 4)}</span>
 }

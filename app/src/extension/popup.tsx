@@ -21,7 +21,7 @@ import { lock } from "./vault"
 type Screen = "portfolio" | "send" | "activity" | "settings"
 
 function Popup() {
-  const { deployment, account, wallet, assets, fee, busy, run, activity, error, actions } = useWallet()
+  const { deployment, account, wallet, assets, fee, names, busy, run, activity, error, actions } = useWallet()
   const [screen, setScreen] = useState<Screen>("portfolio")
   const [receiveOpen, setReceiveOpen] = useState(false)
   const [addTokenOpen, setAddTokenOpen] = useState(false)
@@ -87,7 +87,7 @@ function Popup() {
         ) : screen === "activity" ? (
           <>
             {back}
-            <Activity local={activity} transfers={wallet?.transfers ?? null} />
+            <Activity local={activity} transfers={wallet?.transfers ?? null} names={names} />
           </>
         ) : (
           <SettingsScreen />

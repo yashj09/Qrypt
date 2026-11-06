@@ -35,10 +35,10 @@ const SESSION = "eyrie.session"
 const PBKDF2_ITERATIONS = 600_000
 export const AUTO_LOCK_MS = 15 * 60 * 1000
 
-const toHex = (b: ArrayBuffer | Uint8Array): Hex =>
+export const toHex = (b: ArrayBuffer | Uint8Array): Hex =>
   `0x${Array.from(new Uint8Array(b), (x) => x.toString(16).padStart(2, "0")).join("")}` as Hex
 export const fromHex = (h: Hex): Uint8Array<ArrayBuffer> => Uint8Array.from(h.slice(2).match(/../g) ?? [], (x) => parseInt(x, 16))
-const random = (n: number) => crypto.getRandomValues(new Uint8Array(n))
+export const random = (n: number) => crypto.getRandomValues(new Uint8Array(n))
 
 const aes = (raw: Uint8Array<ArrayBuffer>) => crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt", "decrypt"])
 

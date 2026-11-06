@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils"
 
 export default function AppPage() {
   const w = useWallet()
-  const { deployment, account, wallet, assets, fee, notice, error, stage, busy, run, activity, tab, setTab, actions } = w
+  const { deployment, account, wallet, assets, fee, names, notice, error, stage, busy, run, activity, tab, setTab, actions } = w
   const [receiveOpen, setReceiveOpen] = useState(false)
   const [addTokenOpen, setAddTokenOpen] = useState(false)
   const [restoreOpen, setRestoreOpen] = useState(false)
@@ -90,7 +90,7 @@ export default function AppPage() {
                   onSend={actions.send}
                 />
                 {run && <TransferStatus run={run} />}
-                <Activity local={activity} transfers={wallet?.transfers ?? null} />
+                <Activity local={activity} transfers={wallet?.transfers ?? null} names={names} />
                 <KeyCard
                   busy={busy !== null}
                   onBackup={actions.backup}

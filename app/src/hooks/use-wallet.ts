@@ -232,7 +232,20 @@ export function useWallet() {
     },
   }
 
-  return { deployment, account, wallet, assets, fee, notice, setNotice, error, setError, stage, busy, run, activity, tab, setTab, actions }
+  const names = useMemo<Record<string, string>>(
+    () =>
+      deployment
+        ? {
+            [deployment.stakingRegistry.toLowerCase()]: "the staking registry",
+            [deployment.factory.toLowerCase()]: "the Eyrie factory",
+            [deployment.paymaster.toLowerCase()]: "the paymaster",
+            "0x0000000000000000000000000000000000000000": "a mint",
+          }
+        : ({} as Record<string, string>),
+    [deployment],
+  )
+
+  return { deployment, account, wallet, assets, fee, names, notice, setNotice, error, setError, stage, busy, run, activity, tab, setTab, actions }
 }
 
 export type Wallet = ReturnType<typeof useWallet>
