@@ -14,7 +14,8 @@
     "test:web": "tsx scripts/e2e-web.ts",
     "test:passkey": "tsx scripts/e2e-passkey.ts",
     "test:pay-request": "tsx scripts/check-payment-request.ts",
-    "test:mobile": "tsx scripts/e2e-mobile.ts"
+    "test:mobile": "tsx scripts/e2e-mobile.ts",
+    "icons": "tsx scripts/make-icons.ts"
   },
   "dependencies": {
     "@forshtat/hegota-support": "0.0.1",

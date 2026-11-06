@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { registerServiceWorker, setThemeColor } from "@/lib/pwa"
 import { AlertCircleIcon, InfoIcon, PanelRightOpenIcon } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -35,7 +36,9 @@ export default function AppPage() {
   // Phones get the dark wallet (like the extension); desktop keeps the light one with the dark inspector.
   useEffect(() => {
     document.documentElement.classList.toggle("dark", phone)
+    setThemeColor(phone ? "#0c0d0f" : "#f9f7f3")
   }, [phone])
+  useEffect(registerServiceWorker, [])
   return (
     <WebVaultGate>
       <WalletPage />

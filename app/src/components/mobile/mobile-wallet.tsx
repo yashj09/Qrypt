@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import {
   ArrowDownToLineIcon,
   ArrowLeftIcon,
@@ -24,8 +24,10 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Activity } from "@/components/wallet/activity"
 import type { Wallet } from "@/hooks/use-wallet"
 import { isIos, isStandalone } from "@/hooks/use-media-query"
+import { useInstallPrompt } from "@/lib/pwa"
 import { assetDecimals, assetKey, assetSymbol } from "@/lib/assets"
 import { dollars, short, units } from "@/lib/format"
+import { cn } from "@/lib/utils"
 import type { PaymentRequest } from "@/lib/payment-request"
 import { ReceiveScreen } from "./receive-screen"
 import { ScanScreen } from "./scan-screen"
@@ -34,6 +36,20 @@ import { SendFlow } from "./send-flow"
 type Screen = { kind: "home" } | { kind: "send"; request?: PaymentRequest } | { kind: "receive" } | { kind: "scan" } | { kind: "activity" } | { kind: "settings" }
 
 const HIDE_KEY = "qrypt.hideBalances"
+
+/** The home-screen shortcuts in the manifest open /app#receive and /app#scan. */
+function fromHash(): Screen {
+  const hash = window.location.hash.slice(1)
+  if (hash === "receive" || hash === "scan") {
+    history.replaceState(null, "", window.location.pathname)
+    return { kind: hash }
+  }
+  return { kind: "home" }
+}
+
+/** Page padding that clears the notch and home indicator when installed (viewport-fit=cover). */
+const PAGE =
+  "bg-background px-[max(1rem,env(safe-area-inset-left))] pt-[max(1rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))]"
 
 interface Props {
   w: Wallet
@@ -48,7 +64,17 @@ interface Props {
 /** The phone wallet: one thumb-reachable home, and full-screen steps for send, receive and scan. */
 export function MobileWallet({ w, account, request, onLock, settings }: Props) {
   const { assets, wallet, activity, names, run, tab, setTab, busy, deployment, error, notice, actions } = w
-  const [screen, setScreen] = useState<Screen>(request ? { kind: "send", request } : { kind: "home" })
+  const [screen, setScreen] = useState<Screen>(() => (request ? { kind: "send", request } : fromHash()))
+  const install = useInstallPrompt()
+  useEffect(() => {
+    // A shortcut tapped while the app is already open only changes the hash.
+    const onHash = () => {
+      const next = fromHash()
+      if (next.kind !== "home") setScreen(next)
+    }
+    window.addEventListener("hashchange", onHash)
+    return () => window.removeEventListener("hashchange", onHash)
+  }, [])
   const [hidden, setHidden] = useState(() => localStorage.getItem(HIDE_KEY) === "1")
   const [hoodOpen, setHoodOpen] = useState(false)
   const [installOpen, setInstallOpen] = useState(false)
@@ -61,7 +87,7 @@ export function MobileWallet({ w, account, request, onLock, settings }: Props) {
   const home = () => setScreen({ kind: "home" })
 
   const titled = (title: string, body: ReactNode) => (
-    <div className="flex min-h-svh flex-col gap-4 bg-background p-4 pb-10">
+    <div className={cn("flex min-h-svh flex-col gap-4", PAGE)}>
       <header className="flex items-center gap-2">
         <Button variant="ghost" size="icon" aria-label="Back" onClick={home}>
           <ArrowLeftIcon />
@@ -84,6 +110,12 @@ export function MobileWallet({ w, account, request, onLock, settings }: Props) {
     return titled(
       "Settings",
       <div className="flex flex-col gap-4">
+        {install && (
+          <Button variant="outline" onClick={() => void install()}>
+            <SquarePlusIcon data-icon="inline-start" />
+            Install Qrypt
+          </Button>
+        )}
         {isIos() && !isStandalone() && (
           <Button variant="outline" onClick={() => setInstallOpen(true)}>
             <SquarePlusIcon data-icon="inline-start" />
@@ -100,7 +132,7 @@ export function MobileWallet({ w, account, request, onLock, settings }: Props) {
     )
 
   return (
-    <div className="flex min-h-svh flex-col gap-6 bg-background p-4 pb-10">
+    <div className={cn("flex min-h-svh flex-col gap-6", PAGE)}>
       <header className="flex items-center justify-between">
         <Button variant="outline" className="h-11 rounded-full px-3" onClick={() => setScreen({ kind: "receive" })}>
           <LogoMark className="size-5" />
@@ -163,7 +195,7 @@ export function MobileWallet({ w, account, request, onLock, settings }: Props) {
       <Activity bare local={activity.slice(0, 3)} transfers={(wallet?.transfers ?? []).slice(0, 4)} names={names} />
 
       <Sheet open={hoodOpen} onOpenChange={setHoodOpen}>
-        <SheetContent side="bottom" className="dark max-h-[85svh] overflow-y-auto bg-lattice p-6">
+        <SheetContent side="bottom" className="dark max-h-[85svh] overflow-y-auto bg-lattice p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
           <SheetHeader className="sr-only">
             <SheetTitle>Under the hood</SheetTitle>
             <SheetDescription>Mempool verdicts and frames for your last transaction.</SheetDescription>
@@ -188,7 +220,7 @@ function Tile({ icon, label, onClick }: { icon: ReactNode; label: string; onClic
 export function InstallGuide({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="p-6">
+      <SheetContent side="bottom" className="p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
         <SheetHeader>
           <SheetTitle>Add Qrypt to your Home Screen</SheetTitle>
           <SheetDescription>It opens full screen like an app, and it's needed for payment notifications on iPhone.</SheetDescription>

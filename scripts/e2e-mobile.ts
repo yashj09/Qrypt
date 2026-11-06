@@ -1,10 +1,13 @@
-import { writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { chromium, devices, type Page } from "playwright";
 import QRCode from "qrcode";
 
 /**
  * The phone wallet on an iPhone 15 profile, with Chromium's virtual WebAuthn authenticator as Face ID:
- * onboard, hide balances, keypad send, open a pay link and pay it, scan a QR from a photo, under-the-hood sheet.
+ * onboard, hide balances, keypad send, open a pay link and pay it, scan a QR from a photo, under-the-hood sheet,
+ * the home-screen shortcuts, and that Chromium considers /app installable.
  */
 const WALLET = process.env.QRYPT_WALLET ?? "http://localhost:5180";
 const SHOTS = process.env.QRYPT_SHOTS;
@@ -27,7 +30,30 @@ async function payAndWait(page: Page) {
   return (await included.textContent())?.toLowerCase();
 }
 
+/** Chromium's own installability check (what Lighthouse's PWA audit used). Needs a non-incognito profile. */
+async function checkInstallable() {
+  const dir = mkdtempSync(join(tmpdir(), "qrypt-pwa-"));
+  const context = await chromium.launchPersistentContext(dir, { channel: "chromium", headless: true });
+  try {
+    const page = context.pages()[0] ?? (await context.newPage());
+    await page.goto(`${WALLET}/app`);
+    await page.waitForFunction(() => navigator.serviceWorker.ready.then(() => true), null, { timeout: 30_000 });
+    const cdp = await context.newCDPSession(page);
+    const manifest = await cdp.send("Page.getAppManifest");
+    const critical = manifest.errors.filter((e) => e.critical);
+    if (critical.length) throw new Error(`manifest errors: ${JSON.stringify(critical)}`);
+    const { installabilityErrors } = await cdp.send("Page.getInstallabilityErrors");
+    if (installabilityErrors.length) throw new Error(`not installable: ${JSON.stringify(installabilityErrors)}`);
+  } finally {
+    await context.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 async function main() {
+  await checkInstallable();
+  step("/app is installable: manifest parses, the service worker is active, no installability errors");
+
   const { defaultBrowserType: _ignored, ...iphone } = devices["iPhone 15"];
   const browser = await chromium.launch({ channel: "chromium", headless: true });
   try {
@@ -75,6 +101,12 @@ async function main() {
     await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== "running"));
     await shot(page, "phone-hood");
     step("the under-the-hood sheet shows the last transaction's mempools and frames");
+
+    for (const [hash, title] of [["receive", "Receive"], ["scan", "Scan to pay"]]) {
+      await page.goto(`${WALLET}/app#${hash}`);
+      await page.getByRole("heading", { name: title }).waitFor({ timeout: 30_000 });
+    }
+    step("the home-screen shortcuts open Receive and Scan directly");
     console.log("PASS");
   } finally {
     await browser.close();
