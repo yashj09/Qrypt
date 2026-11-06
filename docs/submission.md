@@ -2,7 +2,7 @@
 
 ## Project name
 
-Q-Pay
+Eyrie
 
 ## Short description (one line)
 
@@ -22,8 +22,8 @@ That validation can't get into any mempool that exists today. The canonical memp
 
 The app sends the same signed transaction to three places and shows the live response from each:
 - the canonical mempool rejects it;
-- the stock alt mempool rejects it;
-- ours admits it, and it lands on the public devnet.
+- the organisers' hosted alt mempool admits it now that the devnet's validation limits were lifted mid-event (before that it rejected it, and the official explorer still shows that record);
+- ours admits it under a bounded, stake-gated budget, and it lands on the public devnet.
 
 The app then shows the per-frame gas from the receipt. A tampered signature is rejected in VERIFY, and so is an underpaid fee. Nothing is charged in either case.
 
@@ -39,7 +39,7 @@ The app then shows the per-frame gas from the receipt. A tampered signature is r
   - Verification uses ZKNOX ETHFALCON's experimental `falcon_core8`, behind an ERC-7913-style adapter we wrote.
   - A converter contract turns the signer's coefficient-domain key into the verifier's NTT-domain key once, with a free `eth_call`.
 - **Mempool:** a fork of forshtat/mempool-workshop-sidecar with ERC-8421 BUDGET-010, meaning per-entity gas sums, a staked ceiling, and a stake check. It relays admitted transactions to ethrex through `ethrex_submitPrivilegedFrameTransaction`.
-- **Client:** a TypeScript frame-transaction builder on the devnet's wire layout. In it, the Falcon signature sits in an ARBITRARY signature entry, which is left out of the signature hash. The client is built with viem, Vite, React and shadcn/ui.
+- **Client:** a TypeScript frame-transaction builder on the devnet's wire layout. In it, the Falcon signature sits in an ARBITRARY signature entry, which is left out of the signature hash. The client is built with viem, Vite, React, shadcn/ui on Base UI, and Motion. It has a landing page and the app: a light wallet surface plus a dark "under the hood" inspector that shows the live mempool verdicts, per-frame gas against the 100k cap, and stress tests.
 - **Infrastructure:**
   - The demo runs on the public alt-mempool devnet (chain 1337).
   - We also have a local fallback devnet: ethrex plus Lighthouse through Kurtosis.
@@ -47,7 +47,7 @@ The app then shows the per-frame gas from the receipt. A tampered signature is r
 
 ## Partner prize: Ethereum Foundation, Best use of the Frame Transaction Alternative Mempool
 
-**How we used it.** Q-Pay needs both things the brief names:
+**How we used it.** Eyrie needs both things the brief names:
 - a verification budget well above 100k, for the post-quantum smart wallet;
 - flexible paymaster state access, for the ERC-20 paymaster.
 
@@ -64,6 +64,7 @@ Both are in one transaction. The canonical mempool rejects it. We admit it on th
 
 ## Links
 
+- Live app: https://qpay-psi.vercel.app
 - Repo: https://github.com/yashj09/qpay
 - Sidecar fork (BUDGET-010): https://github.com/yashj09/mempool-workshop-sidecar/tree/budget-010
 - Upstream PR: https://github.com/forshtat/mempool-workshop-sidecar/pull/2

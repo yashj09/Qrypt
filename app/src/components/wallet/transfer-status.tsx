@@ -21,7 +21,13 @@ function steps(run: Run, phase: RunPhase): { title: string; state: StepState }[]
       state: phase === "rejected" ? "failed" : admitted || phase === "reverted" ? "done" : "active",
     },
     {
-      title: run.included ? `Included in block ${run.included.block}` : phase === "reverted" ? "Reverted onchain" : "Included in a block",
+      title: run.included
+        ? `Included in block ${run.included.block}`
+        : phase === "reverted"
+          ? "Reverted onchain"
+          : phase === "rejected"
+            ? "Never reached a block"
+            : "Included in a block",
       state: phase === "included" ? "done" : phase === "reverted" ? "failed" : phase === "pending" ? "active" : "todo",
     },
   ]

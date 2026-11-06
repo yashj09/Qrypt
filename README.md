@@ -1,6 +1,8 @@
-# Q-Pay
+# Eyrie
 
 **Post-quantum USDC payments on EIP-8141 frame transactions. Zero ETH, zero middlemen.**
+
+Eyrie was called Q-Pay while we built it, so the repo, the contracts (`QPayAccount` and the rest) and the `@qpay/*` packages keep that name.
 
 A brand-new account that holds only USDC sends a payment. A **Falcon-512** signature authorizes it, and there is no ECDSA key anywhere. A permissionless paymaster pays the gas and takes it back **in USDC inside the same transaction**. There is no bundler, relayer or paymaster server: the validation rules are code running in VERIFY frames.
 
@@ -9,9 +11,11 @@ A brand-new account that holds only USDC sends a payment. A **Falcon-512** signa
 | **Canonical mempool** (EIP-8141) | **Rejects** it: the Falcon check costs about 0.7M gas, over the 100k validation cap, and the paymaster reads storage outside `tx.sender` |
 | **Alternative mempool** (ERC-8421) | **Admits** it, under the per-entity validation budget (BUDGET-010) we implemented in the sidecar: the staked account gets up to 1M, and the unstaked paymaster stays under 100k |
 
-Built at ETHGlobal Mumbai 2026 for the Ethereum Foundation "Best use of the Frame Transaction Alternative Mempool" prize. Its brief names PQ-secure smart wallets and ERC-20 paymasters. Q-Pay does both in one transaction.
+Built at ETHGlobal Mumbai 2026 for the Ethereum Foundation "Best use of the Frame Transaction Alternative Mempool" prize. Its brief names PQ-secure smart wallets and ERC-20 paymasters. Eyrie does both in one transaction.
 
-![Q-Pay app: three live mempool gates, the transaction included onchain, and per-frame gas](docs/media/app.png)
+![Eyrie app: the wallet on the left, the dark under-the-hood inspector with live mempool verdicts on the right](docs/media/app.png)
+
+![Eyrie landing page](docs/media/landing.png)
 
 ## Proof it runs on the public devnet
 
@@ -45,7 +49,7 @@ The devnet can be reset at any time. If it has been, `pnpm setup` and `pnpm send
 
 ## Live demo for judges
 
-**https://qpay-psi.vercel.app** creates your own post-quantum account in your browser and sends USDC with 0 ETH. The Falcon key never leaves your device. Our BUDGET-010 sidecar runs on the presenter's laptop behind a tunnel. If it's offline, the organisers' hosted alt mempool still carries the transaction.
+**https://qpay-psi.vercel.app** is the landing page. **https://qpay-psi.vercel.app/app** creates your own post-quantum account in your browser and sends USDC with 0 ETH. The Falcon key never leaves your device. Our BUDGET-010 sidecar runs on the presenter's laptop behind a tunnel. If it's offline, the organisers' hosted alt mempool still carries the transaction.
 
 **Is a 700k-gas VERIFY frame fair to mempool nodes and builders?** Yes, with measured numbers, and without breaking CROPS: see [docs/mempool-safety.md](docs/mempool-safety.md).
 

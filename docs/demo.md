@@ -1,8 +1,8 @@
 # Demo script (4 minutes, plus 3 minutes of Q&A)
 
 **Setup before going on stage:**
-- The sidecar is running (`./devnet/sidecar.sh`) and the app is running (`pnpm app`). Both are pointed at `https://altmempool.forshtat.com`.
-- Browser tab 1: http://localhost:5180
+- The sidecar and tunnel are running detached (see `docs/runbook.md`). The app is live at https://qpay-psi.vercel.app.
+- Browser tab 1: https://qpay-psi.vercel.app (the landing page). Click **Open app** once beforehand so an account exists, then go back.
 - Browser tab 2: the explorer, open on the last transaction (link in the README).
 - Run `pnpm send` once to warm up. Check the account shows USDC and 0 ETH.
 - Backup: the recorded video (`docs/media/`, made on the day).
@@ -13,26 +13,30 @@
 
 ## 0:30 to 1:00. The account
 
-Show the account card: Falcon-512, **0 ETH**, the USDC balance, and 0.02 ETH of refundable stake.
+Scroll the landing page once: the hero, the four-frame diagram, and the gas bars (100k cap, 724k Falcon, 1M staked budget). Click **Open app**.
+
+Show the balance card: Falcon-512, **0 ETH**, the USDC balance, and 0.02 ETH of refundable stake. The dark panel on the right is "Under the hood": what the network sees.
 
 > "No ECDSA key exists for this account. Its only rule is a Falcon-512 signature, checked by code in its own VERIFY frame."
 
-Point at the frames table. There are four frames. Two VERIFY frames are the validation, and two SENDER frames are the gas repayment and the payment. There is no bundler, no relayer and no paymaster server.
+Open the **Frames and gas** tab. There are four frames. Two VERIFY frames are the validation, and two SENDER frames are the gas repayment and the payment. There is no bundler, no relayer and no paymaster server.
 
 ## 1:00 to 2:15. Send
 
-Press **Sign with Falcon and send**. While it runs:
+Switch back to **Mempools**. Press **Review payment**: the dialog shows the fee in USDC and "ETH spent 0". Press **Sign and send**. While it runs:
 
 > "The browser just signed with Falcon in a few milliseconds. The same signed transaction now goes to three mempools."
 
 Read out the three gates as they fill in:
 1. **Canonical, rejected.** "Prefix gas budget exceeds MAX_VERIFY_GAS. That's EIP-8141's 100k rule."
-2. **Stock ERC-8421 alt mempool, rejected.** "1,050,100 exceeds 100,000. Even today's alt mempool can't take any post-quantum signature, because it uses one flat cap."
-3. **Our alt mempool, admitted, then OnChain.** "We implemented the ERC-8421 draft's per-entity budget. The staked account gets up to 1M, and the unstaked paymaster stays under 100k. We sent it upstream as a PR."
+2. **Hosted alt mempool, admitted.** "The organisers lifted all validation limits on this node mid-event. Before that it rejected us with '1,050,100 exceeds 100,000', and the explorer still has that record. Unlimited isn't a rule a public mempool can keep."
+3. **Eyrie alt mempool, admitted, then OnChain.** "Ours admits it under a bounded budget. We implemented the ERC-8421 draft's per-entity budget. The staked account gets up to 1M, and the unstaked paymaster stays under 100k. We sent it upstream as a PR."
 
-The result alert shows the recipient +5 USDC, the paymaster about +0.017 USDC for gas, and **ETH changed by 0 wei**.
+The receipt card on the left shows sent 5 USDC, fee about 0.017 USDC, and **ETH spent 0 wei**. The inspector shows the block and per-frame gas; the Frames tab now shows this transaction's measured gas against the 100k cap line.
 
 ## 2:15 to 3:00. Try to break it
+
+Open the **Stress tests** tab in the inspector.
 
 - **Tamper signature.** The transaction is rejected at frame 0 with `BadFalconSignature()`. Nothing is charged, and the balance is unchanged.
 - **Underpay gas fee.** The transaction is rejected at frame 1 with `FeeTooLow(fee, quote)`. The paymaster's rule is enforced by code, not by a server.
@@ -43,7 +47,7 @@ Switch to the explorer tab. Show the stock node's rejection record for our trans
 
 ## 3:40 to 4:00. Close
 
-> "Q-Pay is a post-quantum USDC wallet with zero ETH and no middlemen. It works today on the public devnet because the alt mempool can admit expensive validation for staked accounts. That's the exact case the EF prize describes. Our BUDGET-010 patch is the piece that makes it possible."
+> "Eyrie is a post-quantum USDC wallet with zero ETH and no middlemen. It works today on the public devnet because the alt mempool can admit expensive validation for staked accounts. That's the exact case the EF prize describes. Our BUDGET-010 patch is the piece that makes it possible."
 
 ## Likely questions
 

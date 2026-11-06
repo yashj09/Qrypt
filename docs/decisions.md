@@ -23,3 +23,13 @@ Each entry gives the date, the decision, and why. Newest last.
 **The paymaster price is an immutable.** Its validation then reads no storage of its own. The only foreign storage it reads is the sender's MockUSDC balance, a slot associated with the sender.
 
 **Use a local devnet (Kurtosis: ethrex plus Lighthouse).** The hosted devnet has been stalled at block `0x63ac6` since Thu 5 Nov 22:58 UTC, and its docs say it may be reset at any time. On this Mac we run it through Colima with Rosetta, because ethrex ships only an amd64 image.
+
+## 6 Nov: product redesign
+
+**The product is now called Eyrie.** An eyrie is a falcon's nest, and Falcon-512 is the signature scheme. "Q-Pay" collided with existing payment brands (QPay in Qatar and Mongolia). Candidates we checked and dropped: PostQ (a post-quantum startup already uses it), Sigil (several crypto wallets), Kestrel (a Solana DeFi product), Trellis and Saker (domains and brands taken). Only the UI, README and submission text are renamed. The contracts, `@qpay/*` packages and repo keep the old name, because renaming deployed contracts would mean redeploying them for nothing.
+
+**Two visual layers: a light wallet and a dark "under the hood" inspector.** Users see a calm wallet. Judges see frames, gas and mempool verdicts. The inspector is open by default because that's what the EF prize is judged on. It reuses shadcn's `.dark` tokens by putting `className="dark"` on the panel, so there's one component set.
+
+**Libraries: shadcn/ui on Base UI plus Motion, nothing else.** No Radix (the project already uses Base UI primitives), no Magic UI or Aceternity (decorative effects read as generic), no router (two routes, and `/app` is lazy-loaded so the landing page ships no viem or Falcon code).
+
+**`lib/qpay.ts` only gained additive changes** (an onboarding progress callback and `estimateFee`), so the send path the judges use didn't change.

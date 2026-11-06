@@ -70,7 +70,7 @@ export function Hero() {
               <Badge variant="success">Complete</Badge>
             </CardFooter>
           </Card>
-          <div className="dark -mt-6 ml-auto w-full max-w-sm rounded-xl border bg-background bg-lattice p-4 text-foreground shadow-2xl lg:-mr-6">
+          <div className="dark mt-4 ml-auto w-full max-w-sm rounded-xl border bg-background bg-lattice p-4 text-foreground shadow-2xl lg:-mr-6">
             <div className="mb-3 flex items-center justify-between">
               <span className="font-mono text-[11px] tracking-widest text-muted-foreground uppercase">Under the hood</span>
               <span className="font-mono text-[11px] text-muted-foreground">Falcon VERIFY {proof.falconGas.toLocaleString()} gas</span>

@@ -18,4 +18,5 @@
 - [x] Explorer evidence: the official explorer shows the stock Gateway rejecting our transaction. The same transaction is onchain in block 726.
 - [x] App shows per-frame gas from the onchain receipt (Falcon VERIFY 676k–724k, 6.8–7.2x the canonical cap).
 - [x] README proof table and measured numbers, `docs/runbook.md`, `docs/demo.md`, `docs/submission.md`.
+- [x] Redesign as **Eyrie**: landing page at `/`, app at `/app` with a light wallet and a dark under-the-hood inspector (mempool verdicts, gas bars against the 100k cap, stress tests), onboarding stepper, review step, receipt and activity list. Verified on production in incognito: onboard, send included in block 2747 with 0 wei ETH spent, tamper rejected at frame 0.
 - [ ] Demo video (you record it), slides, and the dashboard submission.
