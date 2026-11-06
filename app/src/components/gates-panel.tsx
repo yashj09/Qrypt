@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator"
 import { Spinner } from "@/components/ui/spinner"
 import type { Scenario } from "@/lib/qpay"
-import { short, usdc } from "@/lib/format"
+import { gas, short, usdc } from "@/lib/format"
 
 export interface Run {
   scenario: Scenario
@@ -18,7 +18,11 @@ export interface Run {
   alt?: Verdict
   status?: string
   delta?: { recipient: bigint; paymaster: bigint; senderEth: bigint }
+  included?: { block: bigint; frameGas: bigint[] }
 }
+
+const FRAME_NAMES = ["Falcon VERIFY", "Paymaster VERIFY", "Repay in USDC", "Payment"]
+const CANONICAL_CAP = 100_000n
 
 const STEPS = ["New", "Pending", "Submitted", "OnChain"] as const
 
@@ -62,10 +66,22 @@ export function GatesPanel({ run }: { run: Run | null }) {
             {run.delta && (
               <Alert>
                 <CheckCircle2Icon />
-                <AlertTitle>Included onchain</AlertTitle>
-                <AlertDescription>
-                  Recipient +{usdc(run.delta.recipient)}. Paymaster +{usdc(run.delta.paymaster)} for gas. Your ETH changed by{" "}
-                  {run.delta.senderEth.toString()} wei.
+                <AlertTitle>Included onchain{run.included ? ` in block ${run.included.block}` : ""}</AlertTitle>
+                <AlertDescription className="flex flex-col gap-2">
+                  <span>
+                    Recipient +{usdc(run.delta.recipient)}. Paymaster +{usdc(run.delta.paymaster)} for gas. Your ETH changed by{" "}
+                    {run.delta.senderEth.toString()} wei.
+                  </span>
+                  {run.included && (
+                    <span className="flex flex-wrap gap-2">
+                      {run.included.frameGas.map((g, i) => (
+                        <Badge key={i} variant={i === 0 ? "default" : "outline"}>
+                          {FRAME_NAMES[i] ?? `Frame ${i}`}: {gas(g)}
+                          {i === 0 && g > CANONICAL_CAP ? ` (${(Number(g) / Number(CANONICAL_CAP)).toFixed(1)}x the canonical cap)` : ""}
+                        </Badge>
+                      ))}
+                    </span>
+                  )}
                 </AlertDescription>
               </Alert>
             )}

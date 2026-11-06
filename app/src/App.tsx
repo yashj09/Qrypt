@@ -9,6 +9,7 @@ import { GatesPanel, type Run } from "@/components/gates-panel"
 import { FramesCard } from "@/components/frames-card"
 import {
   client,
+  inclusion,
   loadDeployment,
   prepare,
   readBalances,
@@ -84,6 +85,7 @@ export function App() {
               paymaster: (await usdcBalance(deployment, deployment.paymaster)) - before.paymaster,
               senderEth: (await client.getBalance({ address: deployment.account })) - before.senderEth,
             },
+            included: await inclusion(alt.hash).catch(() => undefined),
           }
           setRun(current)
         }

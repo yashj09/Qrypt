@@ -137,3 +137,17 @@ export const toCanonical = (p: Prepared): Promise<Verdict> => submitCanonical(en
 export const toStock = (p: Prepared): Promise<Verdict> => submitStock(endpoints, p.tx)
 export const toAlt = (p: Prepared): Promise<Verdict> => submitAlt(endpoints, p.tx)
 export const statusOf = (hash: Hex) => altStatus(endpoints, hash)
+
+export interface Inclusion {
+  block: bigint
+  frameGas: bigint[]
+}
+
+/** Per-frame execution gas from the onchain receipt (ethrex adds `frameReceipts` to frame transaction receipts). */
+export async function inclusion(hash: Hex): Promise<Inclusion> {
+  const r = (await client.request({ method: "eth_getTransactionReceipt" as never, params: [hash] as never })) as {
+    blockNumber: Hex
+    frameReceipts: { gasUsed: Hex }[]
+  }
+  return { block: BigInt(r.blockNumber), frameGas: r.frameReceipts.map((f) => BigInt(f.gasUsed)) }
+}
