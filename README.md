@@ -43,6 +43,12 @@ The devnet can be reset at any time. If it has been, `pnpm setup` and `pnpm send
 | Falcon signing in the browser | 3–7 ms |
 | Sender's ETH before and after | 0, then 0 |
 
+## Live demo for judges
+
+**https://qpay-psi.vercel.app** creates your own post-quantum account in your browser and sends USDC with 0 ETH. The Falcon key never leaves your device. Our BUDGET-010 sidecar runs on the presenter's laptop behind a tunnel. If it's offline, the organisers' hosted alt mempool still carries the transaction.
+
+**Is a 700k-gas VERIFY frame fair to mempool nodes and builders?** Yes, with measured numbers, and without breaking CROPS: see [docs/mempool-safety.md](docs/mempool-safety.md).
+
 ## How it works
 
 See [docs/architecture.md](docs/architecture.md) for the full picture. In short:

@@ -15,3 +15,5 @@ contracts/falcon/broadcast/
 
 # local secrets and devnet state
 .qpay/
+.vercel
+.env*
