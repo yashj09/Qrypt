@@ -37,8 +37,8 @@ async function main() {
     recipient: RECIPIENT,
     amount: AMOUNT,
     nonceSeq,
-    maxFeePerGas: 2_000_000_000n,
-    maxPriorityFeePerGas: 1_000_000_000n,
+    maxFeePerGas: 3_000_000n,
+    maxPriorityFeePerGas: 2_000_000n,
     usdcPerEth: BigInt(d.usdcPerEth),
   });
   const signer = falconFromSeed(loadSeed());

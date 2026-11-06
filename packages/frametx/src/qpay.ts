@@ -20,10 +20,10 @@ export interface GasLimits {
 export const defaultGas: GasLimits = {
   falconVerify: 950_000n,
   paymasterVerify: 100_000n,
-  repay: 60_000n,
-  repayState: 50_000n,
-  payment: 60_000n,
-  paymentState: 50_000n,
+  repay: 150_000n,
+  repayState: 250_000n,
+  payment: 150_000n,
+  paymentState: 250_000n,
 };
 
 export interface QPayParams {
