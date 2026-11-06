@@ -15,49 +15,92 @@ import {
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput, InputGroupText } from "@/components/ui/input-group"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Spinner } from "@/components/ui/spinner"
-import { short, usdcAmount } from "@/lib/format"
+import { assetDecimals, assetKey, assetSymbol, type Asset, type Holdings } from "@/lib/assets"
+import { short, units, usdcAmount } from "@/lib/format"
 
 const DEFAULT_RECIPIENT = "0x000000000000000000000000000000000000dEaD"
 
 interface Props {
-  balance: bigint | null
+  assets: Asset[]
+  holdings: Holdings | null
   fee: bigint | null
   sending: boolean
   disabled: boolean
-  onSend: (recipient: Address, amount: bigint) => void
+  onSend: (asset: Asset, recipient: Address, amount: bigint) => void
 }
 
-const toUnits = (s: string) => {
-  const n = Number(s)
-  return Number.isFinite(n) && n > 0 ? BigInt(Math.round(n * 1e6)) : 0n
+/** Parses a decimal string into base units without going through floating point. */
+function toBaseUnits(s: string, decimals: number): bigint {
+  const m = s.trim().match(/^(\d*)(?:\.(\d*))?$/)
+  if (!m || (!m[1] && !m[2])) return 0n
+  const frac = (m[2] ?? "").slice(0, decimals).padEnd(decimals, "0")
+  return BigInt(m[1] || "0") * 10n ** BigInt(decimals) + BigInt(frac || "0")
 }
 
-export function SendCard({ balance, fee, sending, disabled, onSend }: Props) {
+export function SendCard({ assets, holdings, fee, sending, disabled, onSend }: Props) {
+  const [assetId, setAssetId] = useState(assetKey(assets[0]))
   const [recipient, setRecipient] = useState(DEFAULT_RECIPIENT)
   const [amount, setAmount] = useState("5")
   const [reviewing, setReviewing] = useState(false)
+  const asset = assets.find((a) => assetKey(a) === assetId) ?? assets[0]
+  const usdcId = assetKey(assets[0])
+  const payingInUsdc = assetKey(asset) === usdcId
+  const balance = holdings?.[assetKey(asset)] ?? null
+  const usdcBalance = holdings?.[usdcId] ?? null
+  const value = toBaseUnits(amount, assetDecimals(asset))
   const validRecipient = /^0x[0-9a-fA-F]{40}$/.test(recipient)
-  const units = toUnits(amount)
-  const affordable = balance === null || fee === null || units + fee <= balance
-  const ready = validRecipient && units > 0n && affordable && !disabled && !sending
+  const feeCovered = usdcBalance === null || fee === null || (payingInUsdc ? value + fee : fee) <= usdcBalance
+  const amountCovered = payingInUsdc || balance === null || value <= balance
+  const affordable = feeCovered && amountCovered
+  const ready = validRecipient && value > 0n && affordable && !disabled && !sending
+  const symbol = assetSymbol(asset)
 
-  const max = () => balance !== null && fee !== null && balance > fee && setAmount(usdcAmount(balance - fee).replace(/,/g, ""))
+  const max = () => {
+    if (balance === null) return
+    const spendable = payingInUsdc ? (fee !== null && balance > fee ? balance - fee : 0n) : balance
+    setAmount(units(spendable, assetDecimals(asset)).replace(/,/g, ""))
+  }
 
   const confirm = () => {
     setReviewing(false)
-    onSend(recipient as Address, units)
+    onSend(asset, recipient as Address, value)
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">Send USDC</CardTitle>
-        <CardDescription>Signed with Falcon in this browser. The fee comes out of your USDC.</CardDescription>
+        <CardTitle className="text-xl">Send</CardTitle>
+        <CardDescription>Any asset you hold. Signed with Falcon in this browser; the fee comes out of your USDC.</CardDescription>
       </CardHeader>
       <CardContent>
         <FieldGroup>
+          <Field>
+            <FieldLabel>Asset</FieldLabel>
+            <Select
+              items={assets.map((a) => ({ label: assetSymbol(a), value: assetKey(a) }))}
+              value={assetId}
+              onValueChange={(v) => setAssetId(String(v))}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {assets.map((a) => (
+                    <SelectItem key={assetKey(a)} value={assetKey(a)}>
+                      {assetSymbol(a)}
+                      <span className="ml-auto font-mono text-xs text-muted-foreground">
+                        {holdings ? units(holdings[assetKey(a)] ?? 0n, assetDecimals(a)) : ""}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </Field>
           <Field data-invalid={!validRecipient || undefined}>
             <FieldLabel htmlFor="recipient">Recipient</FieldLabel>
             <Input
@@ -81,14 +124,16 @@ export function SendCard({ balance, fee, sending, disabled, onSend }: Props) {
                 onChange={(e) => setAmount(e.target.value)}
               />
               <InputGroupAddon align="inline-end">
-                <InputGroupText>USDC</InputGroupText>
+                <InputGroupText>{symbol}</InputGroupText>
                 <InputGroupButton onClick={max}>Max</InputGroupButton>
               </InputGroupAddon>
             </InputGroup>
             {affordable ? (
-              <FieldDescription>Network fee about {fee !== null ? usdcAmount(fee) : "…"} USDC. ETH needed: none.</FieldDescription>
+              <FieldDescription>Network fee about {fee !== null ? usdcAmount(fee) : "…"} USDC. ETH needed for gas: none.</FieldDescription>
             ) : (
-              <FieldError>Amount plus the fee is more than your balance.</FieldError>
+              <FieldError>
+                {!amountCovered ? `You hold less ${symbol} than that.` : "Not enough USDC to cover the amount and the fee."}
+              </FieldError>
             )}
           </Field>
         </FieldGroup>
@@ -96,7 +141,7 @@ export function SendCard({ balance, fee, sending, disabled, onSend }: Props) {
       <CardFooter>
         <Button size="lg" className="w-full" disabled={!ready} onClick={() => setReviewing(true)}>
           {sending ? <Spinner data-icon="inline-start" /> : <SendIcon data-icon="inline-start" />}
-          {sending ? "Sending" : "Review payment"}
+          {sending ? "Sending" : `Review ${symbol} payment`}
         </Button>
       </CardFooter>
       <Dialog open={reviewing} onOpenChange={setReviewing}>
@@ -107,8 +152,8 @@ export function SendCard({ balance, fee, sending, disabled, onSend }: Props) {
           </DialogHeader>
           <div className="flex flex-col gap-4">
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-semibold tracking-tight tabular-nums">{usdcAmount(units)}</span>
-              <span className="text-muted-foreground">USDC</span>
+              <span className="text-4xl font-semibold tracking-tight tabular-nums">{units(value, assetDecimals(asset))}</span>
+              <span className="text-muted-foreground">{symbol}</span>
             </div>
             <div className="flex items-center gap-2 font-mono text-sm text-muted-foreground">
               <span>You</span>
@@ -119,7 +164,7 @@ export function SendCard({ balance, fee, sending, disabled, onSend }: Props) {
             <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-2 text-sm">
               <dt className="text-muted-foreground">Network fee, paid in USDC</dt>
               <dd className="tabular-nums">{fee !== null ? usdcAmount(fee) : "…"} USDC</dd>
-              <dt className="text-muted-foreground">ETH spent</dt>
+              <dt className="text-muted-foreground">ETH spent on gas</dt>
               <dd className="tabular-nums">0</dd>
               <dt className="text-muted-foreground">Signature</dt>
               <dd>Falcon-512</dd>

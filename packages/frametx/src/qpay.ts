@@ -61,12 +61,25 @@ export interface UnsignedWalletTx {
 export const erc20Transfer = (to: Address, amount: bigint): Hex =>
   encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [to, amount] });
 
-/** Upper bound on `max_cost` for the given frames; the paymaster's own quote must not exceed what we pay. */
+const VALUE_TRANSFER_GAS = 9_000n;
+/** The chain's max-cost accounting has terms we don't model exactly; paying 2% over the quote is a few cents of a cent. */
+const MARGIN_PERCENT = 102n;
+
+/**
+ * Upper bound on `max_cost` for the given frames; the paymaster's own quote must not exceed what we pay. Measured on
+ * the devnet: a frame carrying ETH and no calldata costs about 2.9k gas more than this formula without the value term.
+ */
 function maxCostUpperBound(tx: FrameTx, sigBytes: number): bigint {
   const frameGas = tx.frames.reduce((sum, f) => sum + f.limits.execution + f.limits.state, 0n);
   const dataBytes = tx.frames.reduce((sum, f) => sum + BigInt((f.data.length - 2) / 2), 0n) + BigInt(sigBytes);
-  const gas = FRAME_TX_INTRINSIC_GAS + PER_FRAME_GAS * BigInt(tx.frames.length) + CALLDATA_GAS_PER_BYTE * dataBytes + frameGas;
-  return gas * tx.fees.maxFeePerGas;
+  const valueFrames = BigInt(tx.frames.filter((f) => f.value > 0n).length);
+  const gas =
+    FRAME_TX_INTRINSIC_GAS +
+    PER_FRAME_GAS * BigInt(tx.frames.length) +
+    CALLDATA_GAS_PER_BYTE * dataBytes +
+    VALUE_TRANSFER_GAS * valueFrames +
+    frameGas;
+  return (gas * tx.fees.maxFeePerGas * MARGIN_PERCENT) / 100n;
 }
 
 export const quoteUsdc = (maxCostWei: bigint, usdcPerEth: bigint) =>

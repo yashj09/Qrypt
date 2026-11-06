@@ -6,13 +6,16 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Inspector, type InspectorTab } from "@/components/inspector/inspector"
 import { Activity } from "@/components/wallet/activity"
-import { BalanceCard } from "@/components/wallet/balance-card"
+import { AddTokenDialog } from "@/components/wallet/add-token-dialog"
+import { KeyCard } from "@/components/wallet/key-card"
+import { PortfolioCard } from "@/components/wallet/portfolio-card"
+import { ReceiveDialog } from "@/components/wallet/receive-dialog"
 import { OnboardCard } from "@/components/wallet/onboard-card"
 import { SendCard } from "@/components/wallet/send-card"
 import { TopBar } from "@/components/wallet/top-bar"
 import { TransferStatus } from "@/components/wallet/transfer-status"
 import { cn } from "@/lib/utils"
-import { short, usdcAmount } from "@/lib/format"
+import { short } from "@/lib/format"
 import {
   client,
   createAccount,
@@ -22,19 +25,17 @@ import {
   loadDeployment,
   prepareCalls,
   usdcPayment,
-  readBalances,
   statusOf,
   storedAccount,
   toAlt,
   toCanonical,
   toStock,
   usdcBalance,
-  type Balances,
   type Deployment,
   type OnboardStage,
   type Scenario,
 } from "@/lib/qpay"
-import { balanceOf, usdcAsset } from "@/lib/assets"
+import { addCustomToken, balanceOf, formatAsset, knownAssets, readWallet, transferCall, type WalletSnapshot } from "@/lib/assets"
 import { loadActivity, saveActivity, toActivity, type ActivityEntry, type Intent, type Run } from "@/lib/run"
 
 const STRESS_RECIPIENT: Address = "0x000000000000000000000000000000000000dEaD"
@@ -43,7 +44,10 @@ const STRESS_AMOUNT = 1_000_000n
 export default function AppPage() {
   const [deployment, setDeployment] = useState<Deployment | null>(null)
   const [account, setAccount] = useState<Address | null>(null)
-  const [balances, setBalances] = useState<Balances | null>(null)
+  const [wallet, setWallet] = useState<WalletSnapshot | null>(null)
+  const [tokensVersion, setTokensVersion] = useState(0)
+  const [receiveOpen, setReceiveOpen] = useState(false)
+  const [addTokenOpen, setAddTokenOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [stage, setStage] = useState<OnboardStage | null>(null)
   const [busy, setBusy] = useState<Scenario | null>(null)
@@ -56,7 +60,16 @@ export default function AppPage() {
     () => (deployment && account ? estimateFee(deployment, account, [usdcPayment(deployment, account, 0n)]) : null),
     [deployment, account],
   )
-  const refresh = useCallback(async (d: Deployment, a: Address) => setBalances(await readBalances(d, a)), [])
+  // tokensVersion bumps when the user adds a token, which changes what knownAssets reads from storage.
+  const assets = useMemo(
+    () => (deployment && account ? knownAssets(deployment, account) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [deployment, account, tokensVersion],
+  )
+  const refresh = useCallback(
+    async (d: Deployment, a: Address) => setWallet(await readWallet(d, a, knownAssets(d, a))),
+    [],
+  )
 
   const selectAccount = (a: Address | null) => {
     setAccount(a)
@@ -76,11 +89,11 @@ export default function AppPage() {
 
   useEffect(() => {
     if (!deployment || !account) return
-    const tick = () => readBalances(deployment, account).then(setBalances, () => {})
+    const tick = () => readWallet(deployment, account, assets).then(setWallet, () => {})
     tick()
-    const id = setInterval(tick, 4000)
+    const id = setInterval(tick, 5000)
     return () => clearInterval(id)
-  }, [deployment, account])
+  }, [deployment, account, assets])
 
   const onCreate = async () => {
     if (!deployment) return
@@ -98,7 +111,7 @@ export default function AppPage() {
     if (!deployment) return
     forgetAccount(deployment)
     selectAccount(null)
-    setBalances(null)
+    setWallet(null)
     setRun(null)
   }
 
@@ -226,23 +239,49 @@ export default function AppPage() {
             )}
             {account ? (
               <>
-                <BalanceCard balances={balances} onForget={onForget} />
+                <PortfolioCard
+                  assets={assets}
+                  holdings={wallet?.holdings ?? null}
+                  stake={wallet?.balances.stake ?? null}
+                  onReceive={() => setReceiveOpen(true)}
+                  onAddToken={() => setAddTokenOpen(true)}
+                />
                 <SendCard
-                  balance={balances?.usdc ?? null}
+                  assets={assets}
+                  holdings={wallet?.holdings ?? null}
                   fee={fee}
                   sending={busy === "send"}
                   disabled={!deployment || busy !== null}
-                  onSend={(recipient, amount) =>
-                    deployment &&
+                  onSend={(asset, recipient, amount) =>
                     onRun("send", {
-                      title: `${usdcAmount(amount)} USDC to ${short(recipient, 4)}`,
-                      calls: [usdcPayment(deployment, recipient, amount)],
-                      transfer: { asset: usdcAsset(deployment), recipient, amount },
+                      title: `${formatAsset(asset, amount)} to ${short(recipient, 4)}`,
+                      calls: [transferCall(asset, recipient, amount)],
+                      transfer: { asset, recipient, amount },
                     })
                   }
                 />
                 {run && <TransferStatus run={run} />}
-                <Activity entries={activity} />
+                <Activity local={activity} transfers={wallet?.transfers ?? null} />
+                <KeyCard onForget={onForget} />
+                {deployment && (
+                  <>
+                    <ReceiveDialog
+                      open={receiveOpen}
+                      onOpenChange={setReceiveOpen}
+                      account={account}
+                      chainId={deployment.chainId}
+                      assets={assets}
+                    />
+                    <AddTokenDialog
+                      open={addTokenOpen}
+                      onOpenChange={setAddTokenOpen}
+                      onAdd={(asset) => {
+                        addCustomToken(deployment, account, asset)
+                        setTokensVersion((v) => v + 1)
+                      }}
+                    />
+                  </>
+                )}
               </>
             ) : (
               <OnboardCard stage={stage} disabled={!deployment} onCreate={onCreate} />
