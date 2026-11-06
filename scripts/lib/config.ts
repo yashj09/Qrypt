@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Address, Hex } from "viem";
 import type { Endpoints } from "@qpay/frametx";
+import type { UniswapDeployment } from "../../app/src/lib/uniswap-v4.ts";
 
 export const ROOT = resolve(import.meta.dirname, "../..");
 export const STATE_DIR = resolve(ROOT, ".qpay");
@@ -38,6 +39,8 @@ export interface Deployment {
   stakingRegistry: Address;
   /** Tokens the wallet lists by default, besides USDC and ETH. */
   tokens: TokenInfo[];
+  /** Uniswap v4, from scripts/deploy-uniswap.ts. */
+  uniswap?: UniswapDeployment;
 }
 
 export const deploymentPath = (chainId: number) => resolve(ROOT, "deployments", `${chainId}.json`);

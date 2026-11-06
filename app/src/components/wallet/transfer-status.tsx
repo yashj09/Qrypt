@@ -53,7 +53,9 @@ function steps(
       title: run.included
         ? `Included in block ${run.included.block}`
         : phase === "reverted"
-          ? "Reverted onchain"
+          ? run.atomic
+            ? "Reverted onchain: the whole batch was undone. Only the gas fee was paid"
+            : "Reverted onchain"
           : phase === "rejected"
             ? "Never reached a block"
             : phase === "dropped"
@@ -124,7 +126,12 @@ export function TransferStatus({ run, onHood }: { run: Run; onHood?: () => void 
         {phase === "included" && run.delta && (
           <CardFooter className="flex-col items-stretch gap-3">
             <dl className="grid grid-cols-3 gap-3 text-sm">
-              {run.transfer && run.delta.recipient !== undefined ? (
+              {run.swap && run.delta.swapReceived !== undefined ? (
+                <Receipt
+                  label="Received"
+                  value={formatAsset(run.swap.to, run.delta.swapReceived)}
+                />
+              ) : run.transfer && run.delta.recipient !== undefined ? (
                 <Receipt
                   label="Sent"
                   value={formatAsset(run.transfer.asset, run.delta.recipient)}

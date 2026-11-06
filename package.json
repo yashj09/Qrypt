@@ -17,7 +17,12 @@
     "test:mobile": "tsx scripts/e2e-mobile.ts",
     "icons": "tsx scripts/make-icons.ts",
     "push-watcher": "tsx scripts/push-watcher.ts",
-    "test:push": "tsx scripts/e2e-push.ts"
+    "test:push": "tsx scripts/e2e-push.ts",
+    "check:atomic": "tsx scripts/check-atomic.ts",
+    "deploy:uniswap": "tsx scripts/deploy-uniswap.ts",
+    "test:swap-encoding": "tsx scripts/check-swap.ts",
+    "swap": "tsx scripts/swap.ts",
+    "test:swap": "tsx scripts/e2e-swap.ts"
   },
   "dependencies": {
     "@forshtat/hegota-support": "0.0.1",
@@ -31,6 +36,9 @@
   "devDependencies": {
     "@types/qrcode": "^1.5.6",
     "@types/web-push": "^3.6.4",
+    "@uniswap/universal-router": "2.1.0",
+    "@uniswap/v4-core": "1.0.2",
+    "@uniswap/v4-periphery": "1.0.3",
     "@vercel/blob": "^2.8.2",
     "playwright": "^1.64.1",
     "qrcode": "^1.5.4",

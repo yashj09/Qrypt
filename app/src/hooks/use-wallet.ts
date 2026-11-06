@@ -20,7 +20,9 @@ import {
   type OnboardStage,
   type Scenario,
 } from "@/lib/qpay"
-import { addCustomToken, balanceOf, formatAsset, knownAssets, readWallet, transferCall, type Asset, type WalletSnapshot } from "@/lib/assets"
+import { addCustomToken, assetDecimals, assetKey, assetSymbol, balanceOf, formatAsset, knownAssets, readWallet, transferCall, type Asset, type WalletSnapshot } from "@/lib/assets"
+import { currencyOf, quote, routeLabel, swapCalls, usdPrices, type Quote } from "@/lib/swap"
+import { minOut } from "@/lib/uniswap-v4"
 import { closeAccountCalls, createBackup, downloadBackup, prepareRotation, restoreBackup, settleRotation } from "@/lib/keys"
 import { loadActivity, runPhase, saveActivity, toActivity, type ActivityEntry, type Intent, type Run } from "@/lib/run"
 import { short } from "@/lib/format"
@@ -45,6 +47,8 @@ export function useWallet() {
   const [run, setRun] = useState<Run | null>(null)
   const [activity, setActivity] = useState<ActivityEntry[]>([])
   const [tab, setTab] = useState<InspectorTab>("mempools")
+  /** Dollars per whole unit, keyed by assetKey; from the Uniswap pools' mid prices. */
+  const [prices, setPrices] = useState<Record<string, number>>({})
 
   const fee = useMemo(
     () => (deployment && account ? estimateFee(deployment, account, [usdcPayment(deployment, account, 0n)]) : null),
@@ -56,7 +60,14 @@ export function useWallet() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [deployment, account, tokensVersion],
   )
-  const refresh = useCallback(async (d: Deployment, a: Address) => setWallet(await readWallet(d, a, knownAssets(d, a))), [])
+  const refresh = useCallback(async (d: Deployment, a: Address) => {
+    const list = knownAssets(d, a)
+    setWallet(await readWallet(d, a, list))
+    if (d.uniswap) {
+      const byCurrency = await usdPrices(client, d.uniswap, d.usdc, list.map((x) => ({ address: currencyOf(x), decimals: assetDecimals(x) }))).catch(() => ({}) as Record<string, number>)
+      setPrices(Object.fromEntries(list.flatMap((x) => (byCurrency[currencyOf(x).toLowerCase()] !== undefined ? [[assetKey(x), byCurrency[currencyOf(x).toLowerCase()]]] : []))))
+    }
+  }, [])
 
   const selectAccount = (a: Address | null) => {
     setAccount(a)
@@ -108,18 +119,22 @@ export function useWallet() {
       setRun(current)
     }
     const t = intent.transfer
+    const sw = intent.swap
     try {
       const before = {
         recipient: t ? await balanceOf(t.asset, t.recipient) : undefined,
+        swapTo: sw ? await balanceOf(sw.to, account) : undefined,
         paymaster: await usdcBalance(deployment, deployment.paymaster),
         senderEth: await client.getBalance({ address: account }),
       }
-      const p = await prepareCalls(deployment, account, intent.calls, scenario)
+      const p = await prepareCalls(deployment, account, intent.calls, scenario, { atomic: intent.atomic })
       current = {
         scenario,
         hash: p.hash,
         title: intent.title,
         transfer: t,
+        swap: sw,
+        atomic: intent.atomic,
         frames: p.frames,
         fee: p.fee,
         signMs: p.signMs,
@@ -144,11 +159,15 @@ export function useWallet() {
         }
         if (current!.status === "OnChain") {
           const ethSent = intent.calls.reduce((sum, c) => sum + (c.value ?? 0n), 0n)
+          const swapReceived = sw && before.swapTo !== undefined ? (await balanceOf(sw.to, account)) - before.swapTo : undefined
+          // ETH bought by a swap isn't gas either.
+          const ethReceived = sw?.to.kind === "eth" ? (swapReceived ?? 0n) : 0n
           update({
             delta: {
               recipient: t && before.recipient !== undefined ? (await balanceOf(t.asset, t.recipient)) - before.recipient : undefined,
               paymaster: (await usdcBalance(deployment, deployment.paymaster)) - before.paymaster,
-              gasEth: (await client.getBalance({ address: account })) - before.senderEth + ethSent,
+              gasEth: (await client.getBalance({ address: account })) - before.senderEth + ethSent - ethReceived,
+              swapReceived,
             },
             included: await inclusion(p.hash).catch(() => undefined),
           })
@@ -196,6 +215,33 @@ export function useWallet() {
         calls: [transferCall(asset, recipient, amount)],
         transfer: { asset, recipient, amount },
       }),
+    /**
+     * Swaps exactly `q.amountIn` of `from` for at least the reviewed quote minus `slippageBps`. Re-quotes first and
+     * returns "price-moved" instead of signing if the market already moved past that minimum.
+     */
+    async swap(q: Quote, from: Asset, to: Asset, slippageBps: number): Promise<Run | null | "price-moved"> {
+      if (!deployment?.uniswap || !account) return null
+      const u = deployment.uniswap
+      const min = minOut(q.amountOut, slippageBps)
+      setError(null)
+      try {
+        const fresh = await quote(client, u, q.route, q.amountIn)
+        if (fresh.amountOut < min) return "price-moved"
+      } catch (e) {
+        setError(message(e))
+        return null
+      }
+      // Devnet inclusion can take minutes; the router rejects anything after the deadline.
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 20 * 60)
+      const symbols = { in: assetSymbol(from), out: assetSymbol(to) }
+      const symbolOf = (c: Address) => (c.toLowerCase() === currencyOf(from).toLowerCase() ? symbols.in : c.toLowerCase() === currencyOf(to).toLowerCase() ? symbols.out : c.toLowerCase() === deployment.usdc.toLowerCase() ? "USDC" : "…")
+      return runIntent("send", {
+        title: `Swap ${formatAsset(from, q.amountIn)} for ${symbols.out}`,
+        calls: swapCalls(u, q.route, q.amountIn, min, deadline, symbols),
+        swap: { from, to, amountIn: q.amountIn, minOut: min, route: routeLabel(q.route, symbolOf) },
+        atomic: true,
+      })
+    },
     stress: (s: Scenario) =>
       deployment &&
       runIntent(s, {
@@ -249,7 +295,7 @@ export function useWallet() {
     [deployment],
   )
 
-  return { deployment, account, wallet, assets, fee, names, notice, setNotice, error, setError, stage, busy, run, activity, tab, setTab, actions }
+  return { deployment, account, wallet, assets, prices, fee, names, notice, setNotice, error, setError, stage, busy, run, activity, tab, setTab, actions }
 }
 
 export type Wallet = ReturnType<typeof useWallet>

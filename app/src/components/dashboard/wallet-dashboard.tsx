@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react"
 import {
   ActivityIcon,
+  ArrowLeftRightIcon,
   AlertCircleIcon,
   CpuIcon,
   InfoIcon,
@@ -28,6 +29,7 @@ import { AssetList } from "@/components/wallet/asset-list"
 import { BalanceHero } from "@/components/wallet/balance-hero"
 import { ReceiveDialog } from "@/components/wallet/receive-dialog"
 import { SendCard } from "@/components/wallet/send-card"
+import { SwapPanel } from "@/components/swap/swap-panel"
 import { TransferStatus } from "@/components/wallet/transfer-status"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import type { Wallet } from "@/hooks/use-wallet"
@@ -57,6 +59,7 @@ interface Props {
 const BUILT_IN = [
   { id: "portfolio", label: "Portfolio", icon: WalletIcon },
   { id: "send", label: "Send", icon: SendIcon },
+  { id: "swap", label: "Swap", icon: ArrowLeftRightIcon },
   { id: "activity", label: "Activity", icon: ActivityIcon },
   { id: "hood", label: "Under the hood", icon: CpuIcon },
 ] as const
@@ -126,7 +129,7 @@ export function WalletDashboard({ w, onLock, settings, extraSections = [], initi
         return (
           <div className="grid gap-6 @4xl:grid-cols-[minmax(0,1fr)_380px]">
             <div className="flex flex-col gap-6">
-              <BalanceHero account={account} usdc={usdc} onSend={() => go("send")} onReceive={() => setReceiveOpen(true)} onActivity={() => go("activity")} className="p-7" />
+              <BalanceHero account={account} usdc={usdc} onSend={() => go("send")} onReceive={() => setReceiveOpen(true)} onActivity={() => go("activity")} onSwap={deployment?.uniswap ? () => go("swap") : undefined} className="p-7" />
               <div className="flex items-center justify-between">
                 <h2 className="font-medium">Assets</h2>
                 <Button variant="ghost" size="sm" onClick={() => setAddTokenOpen(true)}>
@@ -152,6 +155,17 @@ export function WalletDashboard({ w, onLock, settings, extraSections = [], initi
               onSend={actions.send}
             />
             {run ? <TransferStatus run={run} onHood={besideHood ? undefined : () => go("hood")} /> : <SendHint onHood={besideHood ? undefined : () => go("hood")} />}
+          </div>
+        )
+      case "swap":
+        return (
+          <div className="grid items-start gap-6 @3xl:grid-cols-2">
+            <Card>
+              <CardContent>
+                <SwapPanel w={w} />
+              </CardContent>
+            </Card>
+            {run?.swap ? <TransferStatus run={run} onHood={besideHood ? undefined : () => go("hood")} /> : <SwapHint />}
           </div>
         )
       case "activity":
@@ -237,6 +251,20 @@ export function WalletDashboard({ w, onLock, settings, extraSections = [], initi
         </>
       )}
     </div>
+  )
+}
+
+function SwapHint() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Uniswap v4, signed with Falcon</CardTitle>
+        <CardDescription>
+          Approve, a one-block Permit2 allowance and the swap go into one atomic frame transaction. Gas comes out of your
+          USDC; if the price moves past your minimum, everything is undone. Pools on this devnet are seeded by Qrypt.
+        </CardDescription>
+      </CardHeader>
+    </Card>
   )
 }
 

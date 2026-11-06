@@ -18,6 +18,7 @@ import {
   type Verdict,
 } from "@qpay/frametx"
 import type { FrameTx } from "@forshtat/hegota-support/tx"
+import type { UniswapDeployment } from "@/lib/uniswap-v4"
 import { API_BASE, NODE_RPC } from "@/lib/site"
 import { keyStore } from "@/lib/keystore"
 
@@ -49,6 +50,8 @@ export interface Deployment {
   usdcPerEth: string
   stakingRegistry: Address
   tokens: { address: Address; symbol: string; name: string; decimals: number }[]
+  /** Qrypt's Uniswap v4 deployment and pools (scripts/deploy-uniswap.ts). */
+  uniswap?: UniswapDeployment
 }
 
 const deployments = import.meta.glob<Deployment>("../../../deployments/[0-9]*.json", { eager: true, import: "default" })
@@ -189,9 +192,14 @@ export interface Prepared {
 
 const FEE_CAPS = { maxFeePerGas: 3_000_000n, maxPriorityFeePerGas: 2_000_000n }
 
+export interface CallOptions {
+  /** One EIP-8141 atomic batch: if any call reverts, they all do. */
+  atomic?: boolean
+}
+
 /** The paymaster's quote depends only on the frames' gas limits and the fee caps, so nothing is signed. */
-export const estimateFee = (d: Deployment, account: Address, calls: Call[]): bigint =>
-  buildWalletTx({ ...txBase(d, account, 0n), calls }).fee
+export const estimateFee = (d: Deployment, account: Address, calls: Call[], opts: CallOptions = {}): bigint =>
+  buildWalletTx({ ...txBase(d, account, 0n), calls, atomic: opts.atomic }).fee
 
 const txBase = (d: Deployment, account: Address, nonceSeq: bigint) => ({
   chainId: BigInt(d.chainId),
@@ -211,8 +219,14 @@ export const usdcPayment = (d: Deployment, recipient: Address, amount: bigint): 
 })
 
 /** Builds and Falcon-signs a transaction for `calls`. The stress-test scenarios break it in one specific way. */
-export async function prepareCalls(d: Deployment, account: Address, calls: Call[], scenario: Scenario = "send"): Promise<Prepared> {
-  const base = txBase(d, account, BigInt(await client.getTransactionCount({ address: account })))
+export async function prepareCalls(
+  d: Deployment,
+  account: Address,
+  calls: Call[],
+  scenario: Scenario = "send",
+  opts: CallOptions = {},
+): Promise<Prepared> {
+  const base = { ...txBase(d, account, BigInt(await client.getTransactionCount({ address: account }))), atomic: opts.atomic }
   const quoted = buildWalletTx({ ...base, calls })
   const { tx, fee, frames } = scenario === "underpay" ? buildWalletTx({ ...base, calls, feeOverride: quoted.fee / 10n }) : quoted
   const falcon = await signer()

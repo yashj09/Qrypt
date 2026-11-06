@@ -11,11 +11,22 @@ export const MEMPOOLS: { key: MempoolKey; name: string; rule: string }[] = [
   { key: "alt", name: "Qrypt alt mempool", rule: "ERC-8421 BUDGET-010 · 1M gas for staked entities" },
 ]
 
-/** What the user asked for: a title for humans, the calls for the chain, and the transfer to watch, if any. */
+export interface SwapIntent {
+  from: Asset
+  to: Asset
+  amountIn: bigint
+  minOut: bigint
+  route: string
+}
+
+/** What the user asked for: a title for humans, the calls for the chain, and the transfer or swap to watch, if any. */
 export interface Intent {
   title: string
   calls: Call[]
   transfer?: { asset: Asset; recipient: Address; amount: bigint }
+  swap?: SwapIntent
+  /** Run the calls as one atomic batch (all or nothing). */
+  atomic?: boolean
 }
 
 export interface Run {
@@ -23,6 +34,8 @@ export interface Run {
   hash: Hex
   title: string
   transfer?: Intent["transfer"]
+  swap?: SwapIntent
+  atomic?: boolean
   frames: FrameLabel[]
   fee: bigint
   signMs: number
@@ -31,7 +44,7 @@ export interface Run {
   via?: "alt" | "stock"
   status?: string
   /** Balance changes after inclusion. `gasEth` is the sender's ETH change not explained by an ETH transfer. */
-  delta?: { recipient?: bigint; paymaster: bigint; gasEth: bigint }
+  delta?: { recipient?: bigint; paymaster: bigint; gasEth: bigint; swapReceived?: bigint }
   included?: Inclusion
 }
 

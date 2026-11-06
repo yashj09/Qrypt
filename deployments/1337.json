@@ -15,5 +15,29 @@
       "symbol": "tEUR",
       "decimals": 6
     }
-  ]
+  ],
+  "uniswap": {
+    "poolManager": "0xb7e893fb24fe33f3506943c1b89cdca054d72083",
+    "positionManager": "0xe8fc86da4ce99a88cb7f887ddd44dfb1bf4589ba",
+    "universalRouter": "0x9812f247ce4b58aa94fb616e49b3952187499631",
+    "quoter": "0x77498d2b10677493f8f95af09ac20d6f61b84f66",
+    "stateView": "0xe92cce1c71cc69fed68fe62b71a2f4dfa92fa3aa",
+    "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+    "pools": [
+      {
+        "currency0": "0x13cb6782bb3b525418237cc4ea2d3e4a9ab25ab5",
+        "currency1": "0xd6d325bd53125d6cccb39f61e9379c8f28e3fddb",
+        "fee": 500,
+        "tickSpacing": 10,
+        "hooks": "0x0000000000000000000000000000000000000000"
+      },
+      {
+        "currency0": "0x0000000000000000000000000000000000000000",
+        "currency1": "0x13cb6782bb3b525418237cc4ea2d3e4a9ab25ab5",
+        "fee": 3000,
+        "tickSpacing": 60,
+        "hooks": "0x0000000000000000000000000000000000000000"
+      }
+    ]
+  }
 }

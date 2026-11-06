@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { ArrowDownLeftIcon, CheckIcon, CopyIcon, HistoryIcon, SendIcon } from "lucide-react"
+import { ArrowDownLeftIcon, ArrowLeftRightIcon, CheckIcon, CopyIcon, HistoryIcon, SendIcon } from "lucide-react"
 import type { Address } from "viem"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -12,11 +12,12 @@ interface Props {
   onSend: () => void
   onReceive: () => void
   onActivity?: () => void
+  onSwap?: () => void
   className?: string
 }
 
 /** The coloured card at the top of the wallet: balance, address and the everyday actions. */
-export function BalanceHero({ account, usdc, onSend, onReceive, onActivity, className }: Props) {
+export function BalanceHero({ account, usdc, onSend, onReceive, onActivity, onSwap, className }: Props) {
   const [copied, setCopied] = useState(false)
   const copy = () =>
     navigator.clipboard.writeText(account).then(() => {
@@ -43,6 +44,7 @@ export function BalanceHero({ account, usdc, onSend, onReceive, onActivity, clas
       <div className="flex flex-wrap gap-2">
         <Pill icon={<SendIcon />} label="Send" onClick={onSend} />
         <Pill icon={<ArrowDownLeftIcon />} label="Receive" onClick={onReceive} />
+        {onSwap && <Pill icon={<ArrowLeftRightIcon />} label="Swap" onClick={onSwap} />}
         {onActivity && <Pill icon={<HistoryIcon />} label="Activity" onClick={onActivity} />}
       </div>
     </div>

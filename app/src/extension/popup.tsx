@@ -10,6 +10,7 @@ import { AddTokenDialog } from "@/components/wallet/add-token-dialog"
 import { ReceiveDialog } from "@/components/wallet/receive-dialog"
 import { SendCard } from "@/components/wallet/send-card"
 import { TransferStatus } from "@/components/wallet/transfer-status"
+import { SwapPanel } from "@/components/swap/swap-panel"
 import { useWallet } from "@/hooks/use-wallet"
 import { assetKey } from "@/lib/assets"
 import { AssetList } from "@/components/wallet/asset-list"
@@ -18,10 +19,11 @@ import { VaultGate } from "./components/vault-gate"
 import { mount, openFullscreen, openOnboarding } from "./mount"
 import { lock } from "./vault"
 
-type Screen = "portfolio" | "send" | "activity" | "settings"
+type Screen = "portfolio" | "send" | "swap" | "activity" | "settings"
 
 function Popup() {
-  const { deployment, account, wallet, assets, fee, names, busy, run, activity, error, actions } = useWallet()
+  const w = useWallet()
+  const { deployment, account, wallet, assets, fee, names, busy, run, activity, error, actions } = w
   const [screen, setScreen] = useState<Screen>("portfolio")
   const [receiveOpen, setReceiveOpen] = useState(false)
   const [addTokenOpen, setAddTokenOpen] = useState(false)
@@ -59,6 +61,7 @@ function Popup() {
               onSend={() => setScreen("send")}
               onReceive={() => setReceiveOpen(true)}
               onActivity={() => setScreen("activity")}
+              onSwap={deployment?.uniswap ? () => setScreen("swap") : undefined}
             />
             {run && <TransferStatus run={run} />}
             <div className="flex items-center justify-between">
@@ -84,6 +87,12 @@ function Popup() {
               onSend={actions.send}
             />
           </>
+) : screen === "swap" ? (
+          <>
+            {back}
+            {run?.swap && <TransferStatus run={run} />}
+            <SwapPanel w={w} />
+          </>
         ) : screen === "activity" ? (
           <>
             {back}
@@ -95,7 +104,7 @@ function Popup() {
       </main>
 
       <nav className="grid shrink-0 grid-cols-4 border-t">
-        <NavButton icon={<WalletIcon />} label="Wallet" active={screen === "portfolio" || screen === "send"} onClick={() => setScreen("portfolio")} />
+        <NavButton icon={<WalletIcon />} label="Wallet" active={screen === "portfolio" || screen === "send" || screen === "swap"} onClick={() => setScreen("portfolio")} />
         <NavButton icon={<HistoryIcon />} label="Activity" active={screen === "activity"} onClick={() => setScreen("activity")} />
         <NavButton icon={<Maximize2Icon />} label="Fullscreen" onClick={() => openFullscreen()} />
         <NavButton icon={<SettingsIcon />} label="Settings" active={screen === "settings"} onClick={() => setScreen("settings")} />

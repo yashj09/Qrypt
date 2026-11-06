@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react"
 import {
   ArrowDownToLineIcon,
   ArrowLeftIcon,
+  ArrowLeftRightIcon,
   ArrowUpFromLineIcon,
   CpuIcon,
   EyeIcon,
@@ -11,7 +12,7 @@ import {
   SettingsIcon,
   SquarePlusIcon,
 } from "lucide-react"
-import type { Address } from "viem"
+import { formatUnits, type Address } from "viem"
 import { LogoMark } from "@/components/brand/logo"
 import { Inspector } from "@/components/inspector/inspector"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -24,15 +25,24 @@ import type { Wallet } from "@/hooks/use-wallet"
 import { isIos, isStandalone } from "@/hooks/use-media-query"
 import { useInstallPrompt } from "@/lib/pwa"
 import { assetDecimals, assetKey, assetSymbol } from "@/lib/assets"
-import { dollars, short, units } from "@/lib/format"
+import { short, units } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import type { PaymentRequest } from "@/lib/payment-request"
 import { ReceiveScreen } from "./receive-screen"
 import { ScanScreen } from "./scan-screen"
 import { SendFlow } from "./send-flow"
 import { InstallGuide } from "./install-guide"
+import { SwapPanel } from "@/components/swap/swap-panel"
+import { TransferStatus } from "@/components/wallet/transfer-status"
 
-type Screen = { kind: "home" } | { kind: "send"; request?: PaymentRequest } | { kind: "receive" } | { kind: "scan" } | { kind: "activity" } | { kind: "settings" }
+type Screen =
+  | { kind: "home" }
+  | { kind: "send"; request?: PaymentRequest }
+  | { kind: "receive" }
+  | { kind: "swap" }
+  | { kind: "scan" }
+  | { kind: "activity" }
+  | { kind: "settings" }
 
 const HIDE_KEY = "qrypt.hideBalances"
 
@@ -62,7 +72,7 @@ interface Props {
 
 /** The phone wallet: one thumb-reachable home, and full-screen steps for send, receive and scan. */
 export function MobileWallet({ w, account, request, onLock, settings }: Props) {
-  const { assets, wallet, activity, names, run, tab, setTab, busy, deployment, error, notice, actions } = w
+  const { assets, wallet, prices, activity, names, run, tab, setTab, busy, deployment, error, notice, actions } = w
   const [screen, setScreen] = useState<Screen>(() => (request ? { kind: "send", request } : fromHash()))
   const install = useInstallPrompt()
   useEffect(() => {
@@ -81,7 +91,13 @@ export function MobileWallet({ w, account, request, onLock, settings }: Props) {
     localStorage.setItem(HIDE_KEY, hidden ? "0" : "1")
     setHidden(!hidden)
   }
-  const usdc = wallet?.holdings[assetKey(assets[0])]
+  // The headline is the whole portfolio in dollars: USDC at $1, other assets at the Uniswap pools' mid prices.
+  const total = wallet
+    ? assets.reduce((sum, a, i) => {
+        const price = i === 0 ? 1 : (prices[assetKey(a)] ?? 0)
+        return sum + Number(formatUnits(wallet.holdings[assetKey(a)] ?? 0n, assetDecimals(a))) * price
+      }, 0)
+    : undefined
   const mask = (s: string) => (hidden ? "••••" : s)
   const home = () => setScreen({ kind: "home" })
 
@@ -103,6 +119,8 @@ export function MobileWallet({ w, account, request, onLock, settings }: Props) {
       <SendFlow w={w} request={screen.request} onScan={() => setScreen({ kind: "scan" })} onDone={home} />,
     )
   if (screen.kind === "receive") return titled("Receive", <ReceiveScreen account={account} assets={assets} />)
+  if (screen.kind === "swap")
+    return titled("Swap", <SwapPanel w={w} phone footer={run?.swap && <TransferStatus run={run} />} />)
   if (screen.kind === "scan") return titled("Scan to pay", <ScanScreen onResult={(req) => setScreen({ kind: "send", request: req })} />)
   if (screen.kind === "activity") return titled("Activity", <Activity local={activity} transfers={wallet?.transfers ?? null} names={names} />)
   if (screen.kind === "settings")
@@ -159,12 +177,14 @@ export function MobileWallet({ w, account, request, onLock, settings }: Props) {
       )}
 
       <section className="flex flex-col items-center gap-2 py-6 text-center">
-        {usdc !== undefined ? (
-          <span className="text-6xl font-semibold tracking-tight tabular-nums">${mask(dollars(usdc))}</span>
+        {total !== undefined ? (
+          <span className="text-6xl font-semibold tracking-tight tabular-nums">
+            ${mask(total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}
+          </span>
         ) : (
           <Skeleton className="h-16 w-48" />
         )}
-        <span className="text-sm text-muted-foreground">USDC · 0 ETH needed for gas</span>
+        <span className="text-sm text-muted-foreground">Total balance · 0 ETH needed for gas</span>
         <div className="flex flex-wrap justify-center gap-2 pt-1">
           {assets.slice(1).map((a) => (
             <Badge key={assetKey(a)} variant="outline" className="font-mono">
@@ -174,9 +194,10 @@ export function MobileWallet({ w, account, request, onLock, settings }: Props) {
         </div>
       </section>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className={cn("grid gap-3", deployment?.uniswap ? "grid-cols-4" : "grid-cols-3")}>
         <Tile icon={<ArrowDownToLineIcon />} label="Receive" onClick={() => setScreen({ kind: "receive" })} />
         <Tile icon={<ArrowUpFromLineIcon />} label="Send" onClick={() => setScreen({ kind: "send" })} />
+        {deployment?.uniswap && <Tile icon={<ArrowLeftRightIcon />} label="Swap" onClick={() => setScreen({ kind: "swap" })} />}
         <Tile icon={<ScanLineIcon />} label="Scan" onClick={() => setScreen({ kind: "scan" })} />
       </div>
 
