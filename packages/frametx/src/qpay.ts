@@ -49,6 +49,11 @@ export interface WalletTxParams {
   usdcPerEth: bigint;
   /** Pays this many USDC base units instead of the quote; used to show the paymaster refusing an underpayment. */
   feeOverride?: bigint;
+  /**
+   * Run the calls as one EIP-8141 atomic batch: if any of them reverts, all of them do (e.g. an approval is undone
+   * when the swap after it fails). The gas repayment frame stays outside the batch, so the paymaster is still repaid.
+   */
+  atomic?: boolean;
 }
 
 export interface UnsignedWalletTx {
@@ -104,8 +109,15 @@ export function buildWalletTx(p: WalletTxParams): UnsignedWalletTx {
         frame(profile, "VERIFY", { target: null, execution: defaultGas.falconVerify, scope: "EXECUTION" }),
         frame(profile, "VERIFY", { target: p.paymaster, execution: defaultGas.paymasterVerify, scope: "PAYMENT" }),
         frame(profile, "SENDER", { target: p.usdc, ...defaultGas.repay, data: erc20Transfer(p.paymaster, fee) }),
-        ...p.calls.map((c) =>
-          frame(profile, "SENDER", { target: c.to, ...(c.gas ?? defaultGas.call), value: c.value ?? 0n, data: c.data ?? "0x" }),
+        ...p.calls.map((c, i) =>
+          frame(profile, "SENDER", {
+            target: c.to,
+            ...(c.gas ?? defaultGas.call),
+            value: c.value ?? 0n,
+            data: c.data ?? "0x",
+            // The flag joins a frame to the next one, so it goes on every call but the last.
+            flags: p.atomic && i < p.calls.length - 1 ? profile.flagBits.ATOMIC_BATCH : 0,
+          }),
         ),
       ],
       signatures: [{ scheme: sigScheme(profile, "ARBITRARY"), signer: "0x", msg: "0x", signature: "0x" }],
