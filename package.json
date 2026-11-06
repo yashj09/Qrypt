@@ -7,7 +7,8 @@
     "test:contracts": "forge test --root contracts",
     "app": "pnpm --filter app dev",
     "setup": "tsx scripts/setup.ts",
-    "send": "tsx scripts/send.ts"
+    "send": "tsx scripts/send.ts",
+    "deploy:account": "tsx scripts/upgrade.ts"
   },
   "dependencies": {
     "@forshtat/hegota-support": "0.0.1",

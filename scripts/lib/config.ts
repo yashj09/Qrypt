@@ -19,6 +19,13 @@ export const sharedFunderKey = (process.env.QPAY_FUNDER_KEY ??
 
 export const STAKING_REGISTRY = (process.env.QPAY_STAKING_REGISTRY ?? "") as Address | "";
 
+export interface TokenInfo {
+  address: Address;
+  symbol: string;
+  name: string;
+  decimals: number;
+}
+
 export interface Deployment {
   chainId: number;
   verifier: Address;
@@ -29,6 +36,8 @@ export interface Deployment {
   account: Address;
   usdcPerEth: string;
   stakingRegistry: Address;
+  /** Tokens the wallet lists by default, besides USDC and ETH. */
+  tokens: TokenInfo[];
 }
 
 export const deploymentPath = (chainId: number) => resolve(ROOT, "deployments", `${chainId}.json`);

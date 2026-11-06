@@ -36,6 +36,7 @@ export interface Deployment {
   keyConverter: Address
   usdcPerEth: string
   stakingRegistry: Address
+  tokens: { address: Address; symbol: string; name: string; decimals: number }[]
 }
 
 const deployments = import.meta.glob<Deployment>("../../../deployments/[0-9]*.json", { eager: true, import: "default" })

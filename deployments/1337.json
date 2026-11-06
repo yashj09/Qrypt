@@ -4,8 +4,16 @@
   "keyConverter": "0x7486030adae7864b26768aa1460a1b68e3a5d925",
   "usdc": "0x13cb6782bb3b525418237cc4ea2d3e4a9ab25ab5",
   "paymaster": "0x29381cda4aad43c0a3fb15569ec1d6e0568d9c81",
-  "factory": "0xb2b72cd6d4ca1fa566e477b87e4f346a0611c7f6",
-  "account": "0xB1538a36122FDe2DCe87EFaebb874f4662385C69",
+  "factory": "0x5bec6bc98105ac86eb9197c149ea4564b14d095b",
+  "account": "0x0C3ac474548245A58c7e1A9675C65c9455B7998E",
   "usdcPerEth": "3000000000",
-  "stakingRegistry": "0x9d74679fe08cf4bac98568c60cbd1134c1ed3b24"
+  "stakingRegistry": "0x9d74679fe08cf4bac98568c60cbd1134c1ed3b24",
+  "tokens": [
+    {
+      "address": "0xd6d325bd53125d6cccb39f61e9379c8f28e3fddb",
+      "name": "Test Euro",
+      "symbol": "tEUR",
+      "decimals": 6
+    }
+  ]
 }
