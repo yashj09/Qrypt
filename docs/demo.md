@@ -43,9 +43,9 @@ Open the **Stress tests** tab in the inspector.
 
 ## 3:00 to 3:30. It's a whole wallet
 
-Open https://qpay-psi.vercel.app/dapp in a new tab, with the extension loaded.
+Click the Eyrie icon in the toolbar: the same wallet as a popup. Hit **Fullscreen** for the dashboard tab, then open https://qpay-psi.vercel.app/dapp in a new tab.
 
-1. The dapp lists **Eyrie** (found through EIP-6963). Click **Connect**; approve in the Eyrie window.
+1. The dapp lists **Eyrie** (found through EIP-6963). Click **Connect**; approve in the Eyrie window that pops up.
 2. **Sign in with Eyrie.** "Signature verified onchain via ERC-1271": a Falcon signature, checked by the account itself.
 3. **Claim 50 tEUR.** The dapp sent a plain `eth_sendTransaction`; Eyrie turned it into a frame transaction and paid the gas in USDC. Switch back to the wallet: tEUR is in the asset list and the activity.
 

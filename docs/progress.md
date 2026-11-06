@@ -25,4 +25,6 @@
   - backup and restore in a fresh profile (a wrong password is caught, and a rotated-away backup is refused), then close account (block 6484; stake and balances are 0);
   - popup connect: connect, ERC-1271 sign-in, tEUR claim (block 6529);
   - Chrome extension: `pnpm test:extension` passes, with the claim in block 6582.
+- [x] The extension is the wallet (Talisman-style): popup wallet, fullscreen dashboard, onboarding tab, password-locked vault with auto-lock, Touch ID through WebAuthn PRF where supported, dapp approvals in the extension's own window. `pnpm test:extension` passes end to end: popup send, dapp connect, ERC-1271 sign-in and tEUR claim, locked-request unlock, rotation, backup, then import and send in a fresh browser.
+- [ ] Touch ID checked by hand on your Mac (Chrome and Dia).
 - [ ] Demo video (you record it), slides, and the dashboard submission.

@@ -54,21 +54,29 @@ The fork branch is [yashj09/mempool-workshop-sidecar@budget-010](https://github.
 ## Connecting dapps
 
 ```
-dapp page                 popup flavour                            extension flavour
-─────────                 ─────────────                            ─────────────────
-EIP-1193 request ──▶ createEyriePopupProvider            inpage.js (EIP-6963 announce) ─▶ content.js ─▶ background.js
-                     window.open(/connect?transport=popup)        chrome.windows.create(/connect?transport=extension&rid=…)
-                            │ postMessage (origin from browser)               │ externally_connectable (origin from sender tab)
-                            ▼                                                 ▼
-                     /connect approval page (wallet origin, holds the Falcon key)
-                     connect · personal_sign · eth_signTypedData_v4 · eth_sendTransaction
+dapp page                 web wallet (no install)                       Eyrie extension
+─────────                 ───────────────────────                       ───────────────
+EIP-1193 request ──▶ createEyriePopupProvider               inpage.js (EIP-6963 announce) ─▶ content.js ─▶ background.js
+                     window.open(/connect)                               chrome.windows.create(approve.html?rid=…)
+                            │ postMessage (origin from browser)                  │ chrome.runtime messages (origin from sender tab)
+                            ▼                                                    ▼
+                     /connect, key in the site's localStorage      approve.html, key in the vault (unlock first if locked)
+                            └──────────── same review / execute code (lib/connect/approve.ts) ───────────┘
 ```
 
-- Reads (`eth_call`, balances, receipts) go straight to the node; only the four approval methods open `/connect`.
+- Reads (`eth_call`, balances, receipts) go straight to the node; only the four approval methods open an approval screen.
 - The requesting origin is never taken from the dapp's payload. The popup uses `MessageEvent.origin`; the extension uses the sender tab's URL.
 - `eth_sendTransaction` becomes one call in a frame transaction, is submitted to our alt mempool (falling back to the hosted one), and returns the frame transaction hash.
 - Signatures are Falcon-512 over the EIP-191 or EIP-712 hash. Dapps check them with the account's ERC-1271 `isValidSignature`.
-- The extension (`extension/`, MV3, plain JS) holds no keys. It's a relay, so one account and one approval screen serve both flavours.
+- The two wallets hold separate keys. The extension's pages (popup, dashboard, onboarding, approve) are built from the same `app/src` as the website, by `app/vite.extension.config.ts`, into `extension/dist`.
+
+## The extension's vault
+
+- A random 256-bit data key encrypts the Falcon seed with AES-GCM. The data key is wrapped once per unlock method: by a PBKDF2-SHA-256 key from the password (600k rounds), and optionally by an HKDF key from Touch ID's WebAuthn PRF output.
+- Unlocking puts the data key in `chrome.storage.session`: memory only, cleared on browser restart, not readable by content scripts. The background worker's alarm clears it after 15 idle minutes; activity in any extension page keeps it alive.
+- Signing reads the seed through the `KeyStore` interface (`lib/keystore.ts`). The website plugs in localStorage; the extension plugs in the vault. Everything above that (`useWallet`, the components) is shared.
+- Touch ID is offered only when `getClientExtensionResults().prf` comes back enabled. Without PRF there's no secret to wrap the key with, and a fingerprint gate that doesn't encrypt anything would be theatre.
+- The extension fetches `/api/config` at startup for the current alt-mempool URL, so restarting the tunnel doesn't require a new build.
 
 ## Trust and limits
 

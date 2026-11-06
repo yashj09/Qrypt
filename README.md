@@ -53,13 +53,14 @@ The devnet can be reset at any time. If it has been, `pnpm setup` and `pnpm send
 |---|---|
 | Send and receive any asset | USDC, ETH and any ERC-20 you add. Receive shows your address as a QR code. Activity is read from chain logs, including ETH through the devnet's EIP-7708 transfer logs |
 | Gas in USDC | Every transaction is `[Falcon VERIFY, paymaster VERIFY, repay USDC, ...your calls]`. The paymaster only checks the frame after it, so the calls can be anything |
-| Connect to dapps | **Popup:** an EIP-1193 provider opens `/connect` in a popup, nothing installed. **Extension:** an MV3 Chrome extension injects an EIP-1193 provider and announces it through EIP-6963; approvals open the same `/connect` page. Try both at [/dapp](https://qpay-psi.vercel.app/dapp) |
+| Browser extension | A full wallet in the toolbar (Talisman-style): balance, assets, send, receive, activity, and a **Fullscreen** dashboard tab with under the hood, connected sites and settings. The Falcon key lives in an encrypted vault: password unlock, auto-lock after 15 idle minutes, Touch ID where the browser supports WebAuthn PRF. Dapps find it through EIP-6963 and approve in the extension's own window |
+| Connect without installing | An EIP-1193 provider opens the web wallet's `/connect` page in a popup. Try both ways at [/dapp](https://qpay-psi.vercel.app/dapp) |
 | Sign in with Eyrie | `personal_sign` and `eth_signTypedData_v4` return a Falcon signature over the EIP-191/712 hash; the account's `isValidSignature` (ERC-1271) checks it onchain |
 | Back up and restore | A password-encrypted file (PBKDF2-SHA-256, 600k rounds, AES-GCM), made and read in the browser. Restore checks onchain that the key still controls the account |
 | Rotate the key | A transaction signed by the current key calls `rotateKey`, which only the account itself can call. The old key and old backups stop working |
 | Close the account | One transaction unlocks and withdraws the stake and sweeps every balance to an address you choose |
 
-**Install the extension:** download [eyrie-extension.zip](https://qpay-psi.vercel.app/eyrie-extension.zip), unzip it, open `chrome://extensions`, turn on Developer mode and choose "Load unpacked". It isn't in the Chrome Web Store.
+**Install the extension:** download [eyrie-extension.zip](https://qpay-psi.vercel.app/eyrie-extension.zip), unzip it, open `chrome://extensions`, turn on Developer mode and choose "Load unpacked". (From a clone: `pnpm --filter app build:extension`, then load `extension/dist`.) Onboarding opens by itself: create a wallet or import a backup file from the web wallet. It isn't in the Chrome Web Store.
 
 ## Live demo for judges
 
@@ -112,8 +113,10 @@ pnpm pack:extension
 ```sh
 cd contracts/falcon && forge test   # noble Falcon signatures verify; tampering is rejected
 pnpm test:contracts                  # account v2: receive ETH, rotateKey only from itself, ERC-1271
-pnpm test:extension                  # needs `pnpm app` running: Playwright Chromium loads the unpacked
-                                     # extension, onboards, connects via EIP-6963, signs in, claims tEUR
+pnpm test:web                       # the web wallet: onboard and send
+pnpm test:extension                  # needs `pnpm app` running (for /dapp): Playwright Chromium loads extension/dist,
+                                     # onboards with a password, locks/unlocks, sends from the popup, connects a dapp
+                                     # (EIP-6963), signs in (ERC-1271), claims tEUR, rotates, backs up, imports, sends
 ```
 
 ## Trade-offs and limits
@@ -123,7 +126,8 @@ pnpm test:extension                  # needs `pnpm app` running: Playwright Chro
 - The paymaster charges on the transaction's maximum cost, not on gas actually used. A post-op refund frame would fix this.
 - The sidecar rule is a patch on the workshop sidecar. ERC-8421 BUDGET-010 is still a draft, and its numbers may change.
 - The Falcon key lives in the browser's local storage. The backup file covers a lost browser, but there are no guardians or social recovery: lose both and the account is gone.
-- The extension is loaded unpacked, and its approvals use the hosted wallet's origin, so it needs that site reachable.
+- The extension is loaded unpacked. It fetches `/api/config` and `/api/onboard` from the hosted site, so creating an account needs that site reachable; signing and sending don't.
+- The web wallet and the extension hold separate keys. An account moves between them only through a backup file.
 - The fee bound adds 2% over our model of `max_cost`, because the chain's accounting has terms we don't model exactly. That's about 0.0003 USDC per transaction.
 
 ## Built on

@@ -53,3 +53,15 @@ Each entry gives the date, the decision, and why. Newest last.
 **Key backup is a password-encrypted file, made in the browser.** It uses PBKDF2-SHA-256 at 600k rounds and AES-GCM, through WebCrypto with no dependency. Restoring compares the decrypted key with the account's onchain `falconPubkey`, so a backup that was rotated away is refused rather than silently installed.
 
 **Extension testing is automated.** `pnpm test:extension` loads the unpacked extension in Playwright's Chromium and runs discover, connect, sign-in and claim against the live devnet.
+
+## 7 Nov: the extension becomes the wallet
+
+**The key moves into the extension.** The first extension was a key-less relay to the website's `/connect`, which made "Open wallet" just open a website. A Talisman-style wallet needs the key where the UI is: popup, fullscreen dashboard and approval window all inside the extension. The website keeps its own key for people without the extension; a backup file moves an account between them. This reverses the 6 Nov "one account, two ways in" decision, on purpose.
+
+**Envelope encryption with a session key.** A random data key encrypts the seed; the password (PBKDF2, 600k) and optionally Touch ID (WebAuthn PRF + HKDF) each wrap that data key. The unlocked data key lives in `chrome.storage.session`, which survives the service worker being killed but not a browser restart. Auto-lock is 15 idle minutes.
+
+**Touch ID only where it's real.** Chrome's own profile passkeys don't support PRF; iCloud Keychain passkeys do (Chrome 132+). We create the passkey, check whether PRF came back, and only then wrap the key. Otherwise we say so and keep the password.
+
+**One codebase, two builds.** Signing goes through a `KeyStore` interface and all wallet state lives in `useWallet()`, so the website, popup and dashboard share every feature. The extension pages are a second Vite build of the same `src`.
+
+**Approvals inside the extension.** The background worker opens `approve.html`, which unlocks first if needed and reuses the website's review/execute code. `externally_connectable` is gone: nothing outside the extension can talk to it except through the page provider.

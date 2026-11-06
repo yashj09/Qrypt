@@ -29,7 +29,7 @@ export function Hero() {
           </h1>
           <p className="max-w-xl text-lg text-pretty text-muted-foreground">
             Eyrie is a post-quantum wallet. Every transaction is signed with Falcon-512 and pays its gas in USDC, so you
-            never need ETH. Send and receive any token, and connect to dapps with a popup or the extension.
+            never need ETH. Use it as a browser extension with a fullscreen dashboard, or right here on the web.
           </p>
           <div className="flex flex-wrap gap-3">
             <Button size="lg" nativeButton={false} render={<a href="/app" />}>

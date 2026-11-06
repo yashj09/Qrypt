@@ -29,7 +29,8 @@ The app then shows the per-frame gas from the receipt. A tampered signature is r
 
 Payments are where it starts; Eyrie is a whole wallet on the same transactions:
 - **Any asset:** send and receive USDC, ETH and any ERC-20, with a QR receive screen and an activity list read from chain logs.
-- **Dapps:** a popup provider that needs nothing installed, and a Chrome extension that dapps discover through EIP-6963. Both open one approval page that holds the key. A demo dapp at `/dapp` connects, signs in, and claims test tokens.
+- **Browser extension:** a full wallet in the toolbar with a fullscreen dashboard, its Falcon key in a password-locked vault (envelope encryption, auto-lock, Touch ID through WebAuthn PRF where supported). Dapps discover it through EIP-6963 and approve in the extension's own window.
+- **No-install path:** dapps can also reach the web wallet through a popup provider. A demo dapp at `/dapp` connects, signs in, and claims test tokens either way.
 - **Sign in with Eyrie:** messages and typed data are signed with Falcon-512, and dapps verify them onchain through the account's ERC-1271.
 - **Key safety:** a password-encrypted backup file that is checked onchain on restore, key rotation signed by the old key, and closing the account (unstake and sweep) in one transaction.
 
@@ -46,7 +47,8 @@ Payments are where it starts; Eyrie is a whole wallet on the same transactions:
   - A converter contract turns the signer's coefficient-domain key into the verifier's NTT-domain key once, with a free `eth_call`.
 - **Mempool:** a fork of forshtat/mempool-workshop-sidecar with ERC-8421 BUDGET-010, meaning per-entity gas sums, a staked ceiling, and a stake check. It relays admitted transactions to ethrex through `ethrex_submitPrivilegedFrameTransaction`.
 - **Client:** a TypeScript frame-transaction builder on the devnet's wire layout. In it, the Falcon signature sits in an ARBITRARY signature entry, which is left out of the signature hash. The client is built with viem, Vite, React, shadcn/ui on Base UI, and Motion. It has a landing page and the app: a light wallet surface plus a dark "under the hood" inspector that shows the live mempool verdicts, per-frame gas against the 100k cap, and stress tests. The transaction builder takes any list of calls after the three fixed frames, which is what every wallet feature builds on.
-- **Connect:** an EIP-1193 popup provider, a `/connect` approval page, and an MV3 Chrome extension (EIP-6963) that relays to that page through `externally_connectable`, so keys never leave the wallet's origin. The extension is tested end to end with Playwright's Chromium against the live devnet.
+- **Extension:** MV3, its pages built from the same React code as the website (a `KeyStore` interface swaps localStorage for an encrypted vault). Approvals happen in an extension window that reuses the website's review/execute code. Tested end to end with Playwright's Chromium against the live devnet: onboarding, lock/unlock, popup send, EIP-6963 connect, ERC-1271 sign-in, a dapp transaction, key rotation, backup and import.
+- **No-install connect:** an EIP-1193 popup provider and the website's `/connect` approval page.
 - **Account v2:** `receive()`, `rotateKey` callable only by the account itself, and ERC-1271. Solidity routes empty-calldata calls to `receive()`, so a zero-value one runs the VERIFY logic.
 - **Infrastructure:**
   - The demo runs on the public alt-mempool devnet (chain 1337).

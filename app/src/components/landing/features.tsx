@@ -16,7 +16,7 @@ import { Section, SectionHeading } from "@/components/landing/section"
 const FEATURES: { icon: LucideIcon; title: string; body: string }[] = [
   { icon: ArrowLeftRightIcon, title: "Send and receive anything", body: "USDC, ETH and any ERC-20 you add. Receive with a QR code; history is read from the chain, so it follows you." },
   { icon: CoinsIcon, title: "Gas in USDC, always", body: "Every transaction repays its gas in USDC inside the same frame transaction. You never need to hold ETH." },
-  { icon: PlugIcon, title: "Connect to dapps", body: "A popup that needs nothing installed, or a Chrome extension that dapps find through EIP-6963. Both open the same approval screen." },
+  { icon: PlugIcon, title: "A real browser wallet", body: "The Eyrie extension is a full wallet in your toolbar, with a fullscreen dashboard and a password-locked key (Touch ID where the browser supports it). Dapps find it through EIP-6963." },
   { icon: BadgeCheckIcon, title: "Sign in with Eyrie", body: "Messages and typed data are signed with Falcon-512. Dapps check them onchain through the account's ERC-1271." },
   { icon: HardDriveDownloadIcon, title: "Back up and restore", body: "A password-encrypted key file. Restoring checks onchain that the key still controls the account." },
   { icon: RefreshCwIcon, title: "Rotate or close", body: "Replace your Falcon key with a transaction the old key signs, or unstake and sweep everything in one transaction." },
@@ -51,7 +51,8 @@ export function Features() {
           Chrome extension
         </Button>
         <span className="text-sm text-muted-foreground">
-          Unzip, open chrome://extensions, turn on Developer mode, then "Load unpacked".
+          Unzip, open chrome://extensions, turn on Developer mode, then "Load unpacked". No extension? Dapps can still reach
+          the web wallet through a popup.
         </span>
       </div>
     </Section>
