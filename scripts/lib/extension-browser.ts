@@ -19,3 +19,13 @@ export async function launchWithExtension(): Promise<{ context: BrowserContext; 
 }
 
 export const extensionUrl = (id: string, page: string) => `chrome-extension://${id}/${page}`;
+
+/** The extension service worker's `chrome` global, as far as the scripts touch it. */
+declare global {
+  const chrome: {
+    storage: {
+      local: { get(key: string): Promise<Record<string, unknown>>; set(items: Record<string, unknown>): Promise<void> }
+      session: { clear(): Promise<void> }
+    }
+  };
+}

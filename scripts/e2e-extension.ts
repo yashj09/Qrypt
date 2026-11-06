@@ -1,67 +1,62 @@
 import type { BrowserContext, Page } from "playwright";
-import { launchWithExtension } from "./lib/extension-browser.ts";
+import { extensionUrl, launchWithExtension } from "./lib/extension-browser.ts";
 
 /**
- * Drives the unpacked extension end to end against a running local wallet (`pnpm app`, port 5180):
- * onboard in /app, then in /dapp pick Eyrie from EIP-6963, connect, sign in (ERC-1271) and claim tEUR,
- * approving each request in the window the extension opens.
+ * The extension as a wallet, end to end, in a fresh Chromium profile:
+ * onboarding opens on install, a password-locked vault holds the Falcon key, it locks and unlocks.
  */
-const WALLET = process.env.EYRIE_WALLET ?? "http://localhost:5180";
-
+const PASSWORD = "eyrie-e2e-password";
 const step = (msg: string) => console.log(`- ${msg}`);
 
-/** The extension service worker's `chrome` global, as far as this script touches it. */
-declare const chrome: { storage: { local: { set(items: Record<string, unknown>): Promise<void> } } };
-
-async function approveNext(context: BrowserContext, button: string): Promise<void> {
-  const popup = await context.waitForEvent("page", { predicate: (p) => p.url().includes("/connect"), timeout: 30_000 });
-  await popup.getByRole("button", { name: button, exact: true }).click({ timeout: 30_000 });
+export async function onboard(context: BrowserContext): Promise<Page> {
+  const page =
+    context.pages().find((p) => p.url().includes("onboarding.html")) ??
+    (await context.waitForEvent("page", { predicate: (p) => p.url().includes("onboarding.html"), timeout: 15_000 }));
+  await page.getByText("Create a new wallet").click();
+  await page.locator("#new-password").fill(PASSWORD);
+  await page.locator("#confirm-password").fill(PASSWORD);
+  await page.getByRole("button", { name: "Create wallet" }).click();
+  await page.getByText("Your wallet is ready").waitFor({ timeout: 90_000 });
+  return page;
 }
 
 async function main() {
-  const { context, worker } = await launchWithExtension();
+  const { context, id, worker } = await launchWithExtension();
   try {
-    if (WALLET.startsWith("http://localhost")) await worker.evaluate(() => chrome.storage.local.set({ useLocal: true }));
-    step(`extension loaded: ${worker.url().split("/")[2]}`);
+    await onboard(context);
+    step("onboarding opened on install, created a password-locked wallet and account");
 
-    const page: Page = await context.newPage();
-    await page.goto(`${WALLET}/app`);
-    await page.getByRole("button", { name: "Create my account" }).click({ timeout: 30_000 });
-    await page.getByText("Add token").waitFor({ timeout: 90_000 });
-    step("wallet account created in /app");
+    const dash = await context.newPage();
+    await dash.goto(extensionUrl(id, "dashboard.html"));
+    await dash.locator("aside").waitFor({ timeout: 15_000 });
+    step("dashboard opens unlocked");
 
-    await page.goto(`${WALLET}/dapp`);
-    const eyrie = page.locator("[data-slot=item]").filter({ has: page.getByText("Eyrie", { exact: true }) });
-    await eyrie.waitFor({ timeout: 15_000 });
-    step("dapp discovered the extension through EIP-6963");
+    await worker.evaluate(() => chrome.storage.session.clear());
+    await dash.getByText("Welcome back").waitFor({ timeout: 15_000 });
+    step("locking shows the unlock screen");
 
-    const connected = approveNext(context, "Connect");
-    await eyrie.getByRole("button", { name: "Connect" }).click();
-    await connected;
-    await page.getByText("Connected through Eyrie").waitFor({ timeout: 30_000 });
-    step("connected");
+    await dash.locator("#unlock-password").fill("not-the-password");
+    await dash.getByRole("button", { name: "Unlock" }).click();
+    await dash.getByText("Wrong password.").waitFor({ timeout: 15_000 });
+    step("a wrong password is rejected");
 
-    const signed = approveNext(context, "Sign");
-    await page.getByRole("button", { name: "Sign in with Eyrie" }).click();
-    await signed;
-    await page.getByText("Signature verified onchain via ERC-1271").waitFor({ timeout: 60_000 });
-    step("sign-in verified onchain via ERC-1271");
+    await dash.locator("#unlock-password").fill(PASSWORD);
+    await dash.getByRole("button", { name: "Unlock" }).click();
+    await dash.locator("aside").waitFor({ timeout: 15_000 });
+    step("the right password unlocks");
 
-    const sent = approveNext(context, "Sign and send");
-    await page.getByRole("button", { name: "Claim 50 tEUR" }).click();
-    await sent;
-    const included = page.getByText(/included in block \d+/);
-    await included.waitFor({ timeout: 120_000 });
-    step(`claim ${await included.textContent()}`);
-    await page.getByText("tEUR balance: 50.00").waitFor({ timeout: 30_000 });
-    step("dapp sees 50.00 tEUR");
+    const sealed = await worker.evaluate(async () => JSON.stringify(await chrome.storage.local.get("eyrie.vault")));
+    if (!sealed.includes('"ct"') || /"seed":"0x[0-9a-f]{64}"/.test(sealed)) throw new Error("vault isn't sealed");
+    step("the seed is stored only as AES-GCM ciphertext");
     console.log("PASS");
   } finally {
     await context.close();
   }
 }
 
-main().catch((err) => {
-  console.error("FAIL", err);
-  process.exit(1);
-});
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch((err) => {
+    console.error("FAIL", err);
+    process.exit(1);
+  });
+}

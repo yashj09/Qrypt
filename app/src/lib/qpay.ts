@@ -28,6 +28,17 @@ export const endpoints: Endpoints = {
   stockAltMempool: import.meta.env.VITE_STOCK_RPC ?? "https://altmempoolgateway.forshtat.com/rpc",
 }
 
+/** Points the wallet at the alt mempool the server currently advertises; keeps the built-in default on any failure. */
+export async function applyRemoteConfig(timeoutMs = 3000) {
+  try {
+    const res = await fetch(`${API_BASE}/api/config`, { signal: AbortSignal.timeout(timeoutMs) })
+    const cfg = (await res.json()) as { altMempool?: string | null }
+    if (cfg.altMempool) endpoints.altMempool = cfg.altMempool
+  } catch {
+    // Offline or an old deployment without /api/config: the build-time endpoint stands.
+  }
+}
+
 export interface Deployment {
   chainId: number
   verifier: Address

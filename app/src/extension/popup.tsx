@@ -2,6 +2,7 @@ import { Maximize2Icon } from "lucide-react"
 import { Wordmark } from "@/components/brand/logo"
 import { Button } from "@/components/ui/button"
 import { mount, openFullscreen } from "./mount"
+import { VaultGate } from "./components/vault-gate"
 
 function Popup() {
   return (
@@ -16,4 +17,8 @@ function Popup() {
   )
 }
 
-mount(<Popup />)
+void mount(
+  <VaultGate>
+    <Popup />
+  </VaultGate>,
+)

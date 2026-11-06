@@ -91,3 +91,18 @@ chrome.windows.onRemoved.addListener((windowId) => {
     }
   }
 })
+
+// Session and timing must match app/src/extension/vault.ts.
+const SESSION = "eyrie.session"
+const AUTO_LOCK_MS = 15 * 60 * 1000
+
+chrome.runtime.onInstalled.addListener(({ reason }) => {
+  if (reason === "install") chrome.tabs.create({ url: chrome.runtime.getURL("onboarding.html") })
+})
+
+chrome.alarms.create("autolock", { periodInMinutes: 1 })
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name !== "autolock") return
+  const { [SESSION]: session } = await chrome.storage.session.get(SESSION)
+  if (session && Date.now() - session.lastActive >= AUTO_LOCK_MS) await chrome.storage.session.remove(SESSION)
+})

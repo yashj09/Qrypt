@@ -1,5 +1,6 @@
 import { Wordmark } from "@/components/brand/logo"
 import { mount } from "./mount"
+import { VaultGate } from "./components/vault-gate"
 
 function Dashboard() {
   return (
@@ -11,4 +12,8 @@ function Dashboard() {
   )
 }
 
-mount(<Dashboard />)
+void mount(
+  <VaultGate>
+    <Dashboard />
+  </VaultGate>,
+)
