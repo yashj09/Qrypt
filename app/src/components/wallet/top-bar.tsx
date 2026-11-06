@@ -2,9 +2,8 @@ import { useState, type ReactNode } from "react"
 import { CheckIcon, CopyIcon, PanelRightCloseIcon, PanelRightOpenIcon } from "lucide-react"
 import type { Address } from "viem"
 import { Wordmark } from "@/components/brand/logo"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { useBlockNumber } from "@/hooks/use-block-number"
+import { NetworkBadge } from "@/components/brand/network-badge"
 import { short } from "@/lib/format"
 
 interface Props {
@@ -35,17 +34,6 @@ export function TopBar({ account, inspectorOpen, onToggleInspector, mobileInspec
   )
 }
 
-export function NetworkBadge() {
-  const block = useBlockNumber()
-  return (
-    <Badge variant="outline" className="gap-1.5">
-      <span className="size-1.5 animate-pulse rounded-full bg-success" />
-      Devnet
-      {block !== null && <span className="hidden font-mono text-muted-foreground tabular-nums sm:inline">#{block}</span>}
-    </Badge>
-  )
-}
-
 function AccountChip({ account }: { account: Address }) {
   const [copied, setCopied] = useState(false)
   const copy = () => {
@@ -55,7 +43,7 @@ function AccountChip({ account }: { account: Address }) {
     })
   }
   return (
-    <Button variant="outline" size="sm" className="font-mono" onClick={copy}>
+    <Button variant="outline" size="sm" className="hidden font-mono sm:inline-flex" onClick={copy}>
       {copied ? <CheckIcon data-icon="inline-start" /> : <CopyIcon data-icon="inline-start" />}
       {short(account, 4)}
     </Button>

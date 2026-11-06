@@ -178,9 +178,8 @@ export default function AppPage() {
         onToggleInspector={() => setInspectorOpen((o) => !o)}
         mobileInspector={
           <Sheet>
-            <SheetTrigger render={<Button variant="outline" size="sm" className="lg:hidden" />}>
-              <PanelRightOpenIcon data-icon="inline-start" />
-              Under the hood
+            <SheetTrigger render={<Button variant="outline" size="icon-sm" className="lg:hidden" aria-label="Under the hood" />}>
+              <PanelRightOpenIcon />
             </SheetTrigger>
             <SheetContent side="bottom" className="dark max-h-[85svh] overflow-y-auto bg-lattice p-6">
               <SheetHeader className="sr-only">
