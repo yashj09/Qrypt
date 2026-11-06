@@ -13,5 +13,5 @@
 - [x] End-to-end send: canonical rejected, stock alt mempool rejected, ours admitted, OnChain, and the account's ETH stayed at 0 (`pnpm send`).
 - [x] Failure paths: a tampered signature fails at frame 0 with `BadFalconSignature()`, and an underpaid fee fails at frame 1 with `FeeTooLow`. Nothing is charged.
 - [x] App: the browser signs with Falcon (about 3–7 ms), shows three live gates, a status timeline and balance deltas. Driven in a real browser.
-- [ ] Local Kurtosis devnet as insurance. The amd64 ethrex image hangs under Rosetta, so a native arm64 image build is running.
+- [x] Local devnet insurance: a native arm64 ethrex image is built (`ethrex:local-arm64`), and `devnet/up.sh` uses it.
 - [ ] README, demo video, submission.
