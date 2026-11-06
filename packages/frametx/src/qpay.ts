@@ -39,6 +39,8 @@ export interface QPayParams {
   /** USDC base units per 1 ETH, mirroring the paymaster's immutable price. */
   usdcPerEth: bigint;
   gas?: Partial<GasLimits>;
+  /** Pays this many USDC base units instead of the quote; used to show the paymaster refusing an underpayment. */
+  feeOverride?: bigint;
 }
 
 export interface UnsignedQPay {
@@ -95,7 +97,7 @@ export function buildQPayTx(p: QPayParams): UnsignedQPay {
     });
   const draft = build(0n);
   const bound = maxCostUpperBound(draft, FALCON_SIG_BYTES);
-  const fee = quoteUsdc(bound, p.usdcPerEth);
+  const fee = p.feeOverride ?? quoteUsdc(bound, p.usdcPerEth);
   return { tx: build(fee), fee, maxCostUpperBound: bound };
 }
 
