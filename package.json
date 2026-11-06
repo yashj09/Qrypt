@@ -8,15 +8,20 @@
     "app": "pnpm --filter app dev",
     "setup": "tsx scripts/setup.ts",
     "send": "tsx scripts/send.ts",
-    "deploy:account": "tsx scripts/upgrade.ts"
+    "deploy:account": "tsx scripts/upgrade.ts",
+    "pack:extension": "sh scripts/pack-extension.sh",
+    "test:extension": "tsx scripts/e2e-extension.ts"
   },
   "dependencies": {
     "@forshtat/hegota-support": "0.0.1",
+    "@qpay/falcon": "workspace:*",
+    "@qpay/frametx": "workspace:*",
     "@types/node": "^26.6.6",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
-    "viem": "^2.57.16",
-    "@qpay/falcon": "workspace:*",
-    "@qpay/frametx": "workspace:*"
+    "viem": "^2.57.16"
+  },
+  "devDependencies": {
+    "playwright": "^1.64.1"
   }
 }
