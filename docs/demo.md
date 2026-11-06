@@ -51,6 +51,8 @@ Click the Qrypt icon in the toolbar: the same wallet as a popup. Hit **Fullscree
 
 > "Any dapp that speaks EIP-1193 works, by popup or extension. The key never leaves the wallet."
 
+**If there's time, on two phones** (Qrypt installed on both, notifications on for B): on phone B, open Receive and type 2. On phone A, tap **Scan**, point it at B's QR, then **Pay 2.00 USDC** with Face ID. Phone B buzzes with "Received 2.00 USDC" a few seconds after the block.
+
 ## 3:30 to 3:45. Proof
 
 Switch to the explorer tab and show the block that included our transaction on the public devnet. Point at the README numbers: about 700k gas for the Falcon VERIFY, 7x the canonical cap.

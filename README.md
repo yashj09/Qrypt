@@ -56,6 +56,9 @@ The devnet can be reset at any time. If it has been, `pnpm setup` and `pnpm send
 | Browser extension | A full wallet in the toolbar (Talisman-style): balance, assets, send, receive, activity, and a **Fullscreen** dashboard tab with under the hood, connected sites and settings. The Falcon key lives in an encrypted vault: password unlock, auto-lock after 15 idle minutes, Touch ID where the browser supports WebAuthn PRF. Dapps find it through EIP-6963 and approve in the extension's own window |
 | Connect without installing | An EIP-1193 provider opens the web wallet's `/connect` page in a popup. Try both ways at [/dapp](https://qpay-psi.vercel.app/dapp) |
 | Sign in with Qrypt | `personal_sign` and `eth_signTypedData_v4` return a Falcon signature over the EIP-191/712 hash; the account's `isValidSignature` (ERC-1271) checks it onchain |
+| On your phone | Below 768 px, `/app` becomes a phone wallet: a dollar balance, Receive / Send / Scan tiles, a number-pad send, payment-request QR codes and pay links (`/pay?to=…&amount=…`), scan to pay with the camera or a photo, and an "Under the hood" sheet. It installs to the home screen as a PWA |
+| Face ID unlock and recovery | The web wallet's key sits in an encrypted vault, unlocked by Face ID / Touch ID (a passkey's WebAuthn PRF) or a password, and locks after 15 idle minutes. With Face ID, an encrypted copy is saved to our server, so a new phone recovers the account with one Face ID prompt. The server only holds ciphertext, and only the account's own Falcon key can write it |
+| Payment notifications | Turn them on in Settings and a push arrives when USDC, a token or ETH comes in, even with Qrypt closed. On iPhone this needs the home-screen app |
 | Back up and restore | A password-encrypted file (PBKDF2-SHA-256, 600k rounds, AES-GCM), made and read in the browser. Restore checks onchain that the key still controls the account |
 | Rotate the key | A transaction signed by the current key calls `rotateKey`, which only the account itself can call. The old key and old backups stop working |
 | Close the account | One transaction unlocks and withdraws the stake and sweeps every balance to an address you choose |
@@ -64,7 +67,7 @@ The devnet can be reset at any time. If it has been, `pnpm setup` and `pnpm send
 
 ## Live demo for judges
 
-**https://qpay-psi.vercel.app** is the landing page. **https://qpay-psi.vercel.app/app** creates your own post-quantum account in your browser and sends USDC with 0 ETH. **https://qpay-psi.vercel.app/dapp** is a demo third-party dapp: connect, sign in (verified onchain by ERC-1271) and claim test euros through Qrypt. The Falcon key never leaves your device. Our BUDGET-010 sidecar runs on the presenter's laptop behind a tunnel. If it's offline, the organisers' hosted alt mempool still carries the transaction.
+**https://qpay-psi.vercel.app** is the landing page. **https://qpay-psi.vercel.app/app** creates your own post-quantum account in your browser and sends USDC with 0 ETH. Open `/app` on a phone for the phone wallet, and add it to the home screen for notifications. **https://qpay-psi.vercel.app/dapp** is a demo third-party dapp: connect, sign in (verified onchain by ERC-1271) and claim test euros through Qrypt. The Falcon key never leaves your device. Our BUDGET-010 sidecar runs on the presenter's laptop behind a tunnel. If it's offline, the organisers' hosted alt mempool still carries the transaction.
 
 **Is a 700k-gas VERIFY frame fair to mempool nodes and builders?** Yes, with measured numbers, and without breaking CROPS: see [docs/mempool-safety.md](docs/mempool-safety.md).
 
@@ -114,6 +117,12 @@ pnpm pack:extension
 cd contracts/falcon && forge test   # noble Falcon signatures verify; tampering is rejected
 pnpm test:contracts                  # account v2: receive ETH, rotateKey only from itself, ERC-1271
 pnpm test:web                       # the web wallet: onboard and send
+pnpm test:passkey                    # Face ID (Chromium's virtual WebAuthn authenticator with PRF): create, lock, unlock,
+                                     # send, wipe and recover, rotate then recover again, forged recovery upload refused
+pnpm test:mobile                     # iPhone 15 profile: installable PWA, keypad send, pay link, scan a QR, shortcuts
+pnpm test:push                       # one phone turns on notifications, another pays it, the push watcher delivers
+                                     # "Received 1.00 USDC" through the real push service
+pnpm test:pay-request                # pay link / EIP-681 / address parsing
 pnpm test:extension                  # needs `pnpm app` running (for /dapp): Playwright Chromium loads extension/dist,
                                      # onboards with a password, locks/unlocks, sends from the popup, connects a dapp
                                      # (EIP-6963), signs in (ERC-1271), claims tEUR, rotates, backs up, imports, sends
@@ -125,7 +134,9 @@ pnpm test:extension                  # needs `pnpm app` running (for /dapp): Pla
 - The account stakes 0.02 ETH, which is refundable, so its expensive validation gets the staked budget. Its spendable ETH is 0.
 - The paymaster charges on the transaction's maximum cost, not on gas actually used. A post-op refund frame would fix this.
 - The sidecar rule is a patch on the workshop sidecar. ERC-8421 BUDGET-010 is still a draft, and its numbers may change.
-- The Falcon key lives in the browser's local storage. The backup file covers a lost browser, but there are no guardians or social recovery: lose both and the account is gone.
+- The Falcon key lives in the browser, encrypted. Face ID recovery depends on our Blob store and on the passkey surviving in iCloud Keychain; the backup file covers both. Someone who takes over your iCloud account could recover the key, the same trade-off as Coinbase Smart Wallet; password-only mode avoids it. There are no guardians or social recovery.
+- Face ID needs passkeys bound to `qrypt.money`, so it's offered there and on localhost only. Other hosts get the password vault.
+- Payment notifications come from a watcher on the presenter's laptop, like the sidecar. If it's off, no pushes arrive; nothing else breaks.
 - The extension is loaded unpacked. It fetches `/api/config` and `/api/onboard` from the hosted site, so creating an account needs that site reachable; signing and sending don't.
 - The web wallet and the extension hold separate keys. An account moves between them only through a backup file.
 - The fee bound adds 2% over our model of `max_cost`, because the chain's accounting has terms we don't model exactly. That's about 0.0003 USDC per transaction.

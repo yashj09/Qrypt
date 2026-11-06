@@ -49,7 +49,7 @@ export function KeyCard({ busy, onBackup, onRotate, onClose, onForget }: Props) 
           <KeyRoundIcon className="size-4" />
           Key and account
         </CardTitle>
-        <CardDescription>Your Falcon key lives only in this browser. Back it up; nobody, including us, can recover it.</CardDescription>
+        <CardDescription>Your Falcon key lives on this device, encrypted. A backup file restores it anywhere, without Face ID or our server.</CardDescription>
       </CardHeader>
       <CardContent>
         <ItemGroup>

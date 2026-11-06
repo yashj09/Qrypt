@@ -70,17 +70,35 @@ EIP-1193 request ──▶ createQryptPopupProvider               inpage.js (EIP
 - Signatures are Falcon-512 over the EIP-191 or EIP-712 hash. Dapps check them with the account's ERC-1271 `isValidSignature`.
 - The two wallets hold separate keys. The extension's pages (popup, dashboard, onboarding, approve) are built from the same `app/src` as the website, by `app/vite.extension.config.ts`, into `extension/dist`.
 
-## The extension's vault
+## The vault (extension and web wallet)
+
+`lib/vault/core.ts` is one implementation with two storage backends: `chrome.storage` in the extension, and `localStorage` / `sessionStorage` on the website.
 
 - A random 256-bit data key encrypts the Falcon seed with AES-GCM. The data key is wrapped once per unlock method: by a PBKDF2-SHA-256 key from the password (600k rounds), and optionally by an HKDF key from Touch ID's WebAuthn PRF output.
 - Unlocking puts the data key in `chrome.storage.session`: memory only, cleared on browser restart, not readable by content scripts. The background worker's alarm clears it after 15 idle minutes; activity in any extension page keeps it alive.
 - Signing reads the seed through the `KeyStore` interface (`lib/keystore.ts`). The website plugs in localStorage; the extension plugs in the vault. Everything above that (`useWallet`, the components) is shared.
-- Touch ID is offered only when `getClientExtensionResults().prf` comes back enabled. Without PRF there's no secret to wrap the key with, and a fingerprint gate that doesn't encrypt anything would be theatre.
+- On the website, the unlocked data key lives in `sessionStorage`, and a plain seed left by an older version is moved into the vault on the next visit.
+- Touch ID / Face ID is offered only when `getClientExtensionResults().prf` comes back enabled. Without PRF there's no secret to wrap the key with, and a fingerprint gate that doesn't encrypt anything would be theatre.
 - The extension fetches `/api/config` at startup for the current alt-mempool URL, so restarting the tunnel doesn't require a new build.
+
+## Face ID recovery
+
+- Creating with Face ID makes a discoverable passkey for `qrypt.money` with PRF. Its PRF output, through HKDF, gives a key-encryption key (KEK).
+- The client seals the Falcon seed under the KEK and `PUT`s `/api/recovery` with `{id: sha256(credentialId), record, ts, signature}`. The signature is the account's current Falcon key over `Qrypt recovery v1 / id / account / sha256(record) / ts`. The server checks it by calling the account's ERC-1271 `isValidSignature`, accepts a timestamp within 5 minutes, and refuses to point an existing id at a different account. Records go to a private Vercel Blob store.
+- On a new device, "recover with Face ID" asks for any Qrypt passkey, fetches the record by the credential's hash, decrypts it, and checks onchain that the key still controls the account.
+- Rotating the key re-uploads the record, signed by the new key.
+
+## Phone app and push
+
+- `/app` below 768 px renders `components/mobile/`: home, number-pad send, receive (QR of a pay link), scan (`qr-scanner`), activity, settings. Pay links, EIP-681 URIs and plain addresses all parse through `lib/payment-request.ts`.
+- `manifest.webmanifest`, the icons (`pnpm icons`) and the Apple meta tags make it installable. `public/sw.js` has no fetch handler and no cache, so the code that runs is always the deployed code. It only shows push notifications and opens the app when one is tapped.
+- Turning notifications on subscribes the browser (VAPID) and `POST`s `/api/push` with the subscription, signed by the Falcon key and checked through ERC-1271 like recovery. Only known push-service hosts are accepted.
+- `scripts/push-watcher.ts` runs on the laptop. It reloads subscriptions from Blob every minute, reads `Transfer` logs to those accounts every 4 seconds (ERC-20s, and ETH through the EIP-7708 system address), and sends Web Push. Subscriptions the push service reports gone are deleted.
 
 ## Trust and limits
 
 - The Falcon verifier and helper are unaudited research code (ZKNOX, experimental branch).
 - The paymaster charges on `max_cost`, not on actual gas used. There is no post-op refund yet.
-- Each user's Falcon key lives in their browser's local storage, recoverable only from their encrypted backup file. The CLI demo account's key lives in `.qpay/falcon-seed.hex`.
+- Each user's Falcon key lives in their browser, encrypted by the vault, and is recoverable from their backup file or, with Face ID, from the ciphertext on our server.
+- Recovery and notifications use our private Blob store; notifications also need the laptop watcher. The CLI demo account's key lives in `.qpay/falcon-seed.hex`.
 - The extension needs the hosted wallet site to be reachable, since approvals happen there.

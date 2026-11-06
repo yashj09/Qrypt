@@ -71,3 +71,16 @@ Each entry gives the date, the decision, and why. Newest last.
 The product is now **Qrypt**, at `qrypt.money`. Known conflict, accepted: **Qrypt Inc.** (New York, 2017) sells quantum-resistant encryption and owns qrypt.com, the same category as us. That's a trademark and search risk for a real product; it was accepted for now. Storage keys (`eyrie.vault`, `qpay.*`) and the backup format id stay unchanged, so existing wallets and backup files keep working. The mark is a "Q" drawn with lattice points.
 
 **Mobile direction: an installable web wallet first, not a native app.** The Secure Enclave can't sign Falcon, so a native app only wraps the key in hardware. Most of that protection is available on the web through passkey PRF (Face ID), and judges can use it today without TestFlight. A Capacitor iOS shell stays on the roadmap for App Store distribution, native push and Secure Enclave–wrapped keys.
+
+## 7 Nov: phone wallet, Face ID recovery, push
+
+**Recovery records live on our server, written only by the account.** You chose a private Vercel Blob store over an onchain registry. Writes are authenticated by the account's own Falcon key through ERC-1271, so there are no passwords, no ECDSA and no admin, and nobody can overwrite someone else's record. The store only holds ciphertext. Moving to an onchain registry later is a contained change.
+
+**Passkeys can't weaken post-quantum security here.** WebAuthn PRF is the authenticator's symmetric `hmac-secret`, not its P-256 signature. A quantum attack on P-256 doesn't reveal it, and the account's authority stays Falcon-512.
+
+**The phone UI is the same `/app`, not a separate app.** Below 768 px the route renders a phone layout on the same `useWallet()` hook, so every feature and fix lands on both.
+
+**The service worker has no fetch handler.** Offline caching would mean users could run a stale wallet; a wallet should always run the deployed code. The worker only shows notifications.
+
+**The push watcher runs on the laptop, next to the sidecar.** It needs a long-running process and the VAPID private key, which we keep off Vercel. The VAPID public key is committed in `lib/site.ts`. Because the watcher POSTs to whatever endpoint a record holds, `/api/push` and the watcher only accept known push-service hosts.
+

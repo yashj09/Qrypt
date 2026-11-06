@@ -65,9 +65,9 @@ async function main() {
     await pageA.getByRole("switch", { name: "Payment received" }).click();
     const res = await registered;
     if (!res.ok()) throw new Error(`/api/push answered ${res.status()}: ${await res.text()}`);
-    await waitForNotification(pageA, "Payment notifications are on", 15_000);
     const endpoint = await pageA.evaluate(async () => (await (await navigator.serviceWorker.ready).pushManager.getSubscription())?.endpoint);
-    subscriptionPath = pushPath(account, endpoint!);
+    subscriptionPath = pushPath(account, endpoint!); // deleted in finally, even if a later step fails
+    await waitForNotification(pageA, "Payment notifications are on", 15_000);
     step(`turned notifications on: subscription signed by A's Falcon key and stored (${new URL(endpoint!).hostname})`);
 
     const forged = await pageA.evaluate(async (account) => {
