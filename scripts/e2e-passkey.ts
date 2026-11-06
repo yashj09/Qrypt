@@ -55,6 +55,48 @@ async function main() {
     step("locked, then unlocked with Face ID");
     step(`sent 1 USDC, included in block ${await sendOne(page)}`);
 
+    await page.getByText("Recoverable with Face ID on your other devices.").waitFor({ timeout: 30_000 });
+    const account = await page.evaluate(() => Object.entries(localStorage).find(([k]) => k.startsWith("qpay.account."))?.[1]);
+    step(`Face ID recovery is saved for ${account}`);
+
+    const recover = async () => {
+      await page.evaluate(() => {
+        localStorage.clear();
+        sessionStorage.clear();
+      });
+      await page.reload();
+      await page.getByRole("button", { name: /recover with Face ID/ }).click({ timeout: 30_000 });
+      await page.getByText("Recovered with Face ID").waitFor({ timeout: 60_000 });
+      const got = await page.evaluate(() => Object.entries(localStorage).find(([k]) => k.startsWith("qpay.account."))?.[1]);
+      if (got !== account) throw new Error(`recovered ${got}, expected ${account}`);
+    };
+    await recover();
+    step(`wiped all site storage (a new phone), recovered the same account with Face ID, sent 1 USDC in block ${await sendOne(page)}`);
+
+    await page.getByRole("button", { name: "Rotate", exact: true }).click();
+    await page.getByRole("button", { name: "Rotate key" }).click();
+    await page.getByText("Key rotated").waitFor({ timeout: 90_000 });
+    const resaved = page.waitForResponse((r) => r.url().includes("/api/recovery") && r.request().method() === "PUT", { timeout: 60_000 });
+    if ((await resaved).status() !== 200) throw new Error(`re-saving recovery after rotation failed: ${(await (await resaved).text())}`);
+    await recover();
+    step(`rotated the key; recovery was re-saved, so a wiped device recovers the rotated key and sends: block ${await sendOne(page)}`);
+
+    const forged = await page.evaluate(async (acct) => {
+      const res = await fetch("/api/recovery", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          id: `0x${"ab".repeat(32)}`,
+          record: { v: 1, account: acct, iv: "0x00", ct: "0x00", prfSalt: "0x00" },
+          ts: Date.now(),
+          signature: `0x${"00".repeat(1064)}`,
+        }),
+      });
+      return res.status;
+    }, account);
+    if (forged !== 401) throw new Error(`a forged recovery upload returned ${forged}, expected 401`);
+    step("a recovery upload without the account's Falcon signature is refused (401)");
+
     const legacy = await (await browser.newContext()).newPage();
     await legacy.goto(`${WALLET}/app`);
     const seed = `0x${"11".repeat(32)}`;
@@ -76,6 +118,13 @@ async function main() {
     await plain.getByText("Add token").waitFor({ timeout: 90_000 });
     step("without passkeys, the wallet falls back to a password");
     console.log("PASS");
+  } catch (err) {
+    for (const ctx of browser.contexts())
+      for (const p of ctx.pages()) {
+        const text = await p.locator("body").innerText().catch(() => "");
+        console.error(`--- ${p.url()}\n${text.replace(/\n+/g, " | ").slice(0, 600)}`);
+      }
+    throw err;
   } finally {
     await browser.close();
   }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import { FingerprintIcon, KeyRoundIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item"
 import { Spinner } from "@/components/ui/spinner"
 import { createPasskey, passkeysAvailable } from "@/lib/passkey"
-import type { VaultApi } from "@/lib/vault/core"
+import type { PasskeyKey, VaultApi } from "@/lib/vault/core"
 
 interface Methods {
   passkey: boolean
@@ -16,7 +16,15 @@ interface Methods {
 }
 
 /** Face ID and password for one vault. At least one always stays on. */
-export function UnlockMethodsCard({ vault }: { vault: VaultApi }) {
+interface Props {
+  vault: VaultApi
+  /** Runs after a passkey is added, e.g. to save Face ID recovery. */
+  onPasskeyAdded?: (key: PasskeyKey) => Promise<void>
+  /** Extra status under the methods, e.g. whether recovery is saved. */
+  footer?: ReactNode
+}
+
+export function UnlockMethodsCard({ vault, onPasskeyAdded, footer }: Props) {
   const [m, setM] = useState<Methods | null>(null)
   const [editing, setEditing] = useState(false)
   const [current, setCurrent] = useState("")
@@ -47,6 +55,7 @@ export function UnlockMethodsCard({ vault }: { vault: VaultApi }) {
       const created = await createPasskey()
       if (!created.ok) throw new Error("This browser made the passkey but can't derive a key from it (no WebAuthn PRF).")
       await vault.addPasskey(created.key)
+      await onPasskeyAdded?.(created.key)
       return "Face ID can now unlock Qrypt on this device."
     })
 
@@ -119,6 +128,7 @@ export function UnlockMethodsCard({ vault }: { vault: VaultApi }) {
             </Field>
           </FieldGroup>
         )}
+        {footer}
         {message &&
           (message.ok ? <p className="text-sm text-muted-foreground">{message.text}</p> : <FieldError>{message.text}</FieldError>)}
       </CardContent>

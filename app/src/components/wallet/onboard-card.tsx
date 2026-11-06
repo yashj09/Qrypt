@@ -1,4 +1,5 @@
-import { CheckIcon, KeyRoundIcon } from "lucide-react"
+import { useState } from "react"
+import { CheckIcon, FingerprintIcon, KeyRoundIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Item, ItemContent, ItemDescription, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item"
@@ -31,10 +32,26 @@ interface Props {
   needsVault: boolean
   onCreate: (protection?: Protection) => Promise<void>
   onRestore: () => void
+  /** Face ID recovery, offered when this device has no vault and the browser supports passkeys. */
+  onRecover?: () => Promise<void>
 }
 
-export function OnboardCard({ stage, disabled, needsVault, onCreate, onRestore }: Props) {
+export function OnboardCard({ stage, disabled, needsVault, onCreate, onRestore, onRecover }: Props) {
   const busy = stage !== null
+  const [recovering, setRecovering] = useState(false)
+  const [recoverError, setRecoverError] = useState<string | null>(null)
+  const recover = async () => {
+    if (!onRecover) return
+    setRecovering(true)
+    setRecoverError(null)
+    try {
+      await onRecover()
+    } catch (e) {
+      setRecoverError((e as Error).message)
+    } finally {
+      setRecovering(false)
+    }
+  }
   const current = stage ? STAGES.findIndex((s) => s.key === stage) : -1
   return (
     <Card>
@@ -69,6 +86,13 @@ export function OnboardCard({ stage, disabled, needsVault, onCreate, onRestore }
             {busy ? STAGES[current]?.title ?? "Working" : "Create my account"}
           </Button>
         )}
+        {needsVault && onRecover && (
+          <Button variant="outline" disabled={busy || recovering || disabled} onClick={recover}>
+            {recovering ? <Spinner data-icon="inline-start" /> : <FingerprintIcon data-icon="inline-start" />}
+            I already have Qrypt: recover with Face ID
+          </Button>
+        )}
+        {recoverError && <p className="text-center text-sm text-destructive">{recoverError}</p>}
         <Button variant="ghost" disabled={busy} onClick={onRestore}>
           I have a backup file
         </Button>

@@ -22,6 +22,9 @@ import type { Protection } from "@/components/vault/protection-choice"
 import { openBackup } from "@/lib/keys"
 import { storeAccount } from "@/lib/qpay"
 import { webVault } from "@/lib/vault/web"
+import { askPasskey, passkeysAllowedHere } from "@/lib/passkey"
+import { recoverWithPasskey, uploadRecovery } from "@/lib/recovery"
+import { RecoveryStatus } from "@/components/vault/recovery-status"
 import { cn } from "@/lib/utils"
 
 export default function AppPage() {
@@ -45,7 +48,39 @@ function WalletPage() {
   const create = async (protection?: Protection) => {
     if (!deployment) throw new Error("Still connecting to the network. Try again in a moment.")
     if (protection) await webVault.create(protection)
-    await actions.create()
+    const created = await actions.create()
+    if (created && protection && "passkey" in protection) {
+      await uploadRecovery(created, protection.passkey, (await webVault.keyStore.seed())!).catch((e) =>
+        w.setNotice(`Account created, but Face ID recovery wasn't saved: ${(e as Error).message}. Save it from Settings.`),
+      )
+    }
+  }
+
+  const recover = async () => {
+    if (!deployment) throw new Error("Still connecting to the network. Try again in a moment.")
+    const { account: recovered, seed, passkey } = await recoverWithPasskey(deployment)
+    await webVault.create({ passkey })
+    await webVault.keyStore.save(seed)
+    storeAccount(deployment, recovered)
+    actions.reload()
+    w.setNotice("Recovered with Face ID and checked onchain. This device now controls your account.")
+  }
+
+  /** Rotation changes the seed, so the Face ID recovery record must be re-saved under the new key. */
+  const rotate = async () => {
+    const before = await webVault.keyStore.seed()
+    await actions.rotate()
+    const after = await webVault.keyStore.seed()
+    const passkey = await webVault.passkey()
+    if (account && after && after !== before && passkey) {
+      w.setNotice("Key rotated. Confirm with Face ID to update your recovery…")
+      try {
+        await uploadRecovery(account, await askPasskey(passkey.credentialId), after)
+        w.setNotice("Key rotated and Face ID recovery updated. Old backup files no longer work: make a new one.")
+      } catch (e) {
+        w.setNotice(`Key rotated, but Face ID recovery wasn't updated (${(e as Error).message}). Save it from Settings.`)
+      }
+    }
   }
 
   const restore = async (file: File, password: string, protection?: Protection) => {
@@ -124,11 +159,15 @@ function WalletPage() {
                 />
                 {run && <TransferStatus run={run} />}
                 <Activity local={activity} transfers={wallet?.transfers ?? null} names={names} />
-                <UnlockMethodsCard vault={webVault} />
+                <UnlockMethodsCard
+                  vault={webVault}
+                  onPasskeyAdded={async (key) => account && uploadRecovery(account, key, (await webVault.keyStore.seed())!)}
+                  footer={<RecoveryStatus account={account} />}
+                />
                 <KeyCard
                   busy={busy !== null}
                   onBackup={actions.backup}
-                  onRotate={actions.rotate}
+                  onRotate={rotate}
                   onClose={actions.close}
                   onForget={actions.forget}
                 />
@@ -151,7 +190,14 @@ function WalletPage() {
               </>
             ) : (
               <>
-                <OnboardCard stage={stage} disabled={!deployment} needsVault={needsVault} onCreate={create} onRestore={() => setRestoreOpen(true)} />
+                <OnboardCard
+                  stage={stage}
+                  disabled={!deployment}
+                  needsVault={needsVault}
+                  onCreate={create}
+                  onRestore={() => setRestoreOpen(true)}
+                  onRecover={passkeysAllowedHere() ? recover : undefined}
+                />
                 <RestoreDialog open={restoreOpen} onOpenChange={setRestoreOpen} needsVault={needsVault} onRestore={restore} />
               </>
             )}

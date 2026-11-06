@@ -6,24 +6,47 @@ import { defineConfig, type Plugin } from "vite"
 
 const ROOT = resolve(import.meta.dirname, "..")
 
-/** Serves api/onboard.ts under `vite dev`, so local runs use the same handler Vercel deploys. */
-function devOnboarding(): Plugin {
+/** Loads KEY=VALUE lines (from `vercel env pull`) without overriding what's already set. */
+function loadEnvFile(file: string) {
+  if (!existsSync(file)) return
+  for (const line of readFileSync(file, "utf8").split("\n")) {
+    const m = line.match(/^([A-Z0-9_]+)="?(.*?)"?$/)
+    if (m && process.env[m[1]] === undefined) process.env[m[1]] = m[2]
+  }
+}
+
+/** Serves api/*.ts under `vite dev` with the same Web handlers Vercel deploys (GET/POST/PUT exports). */
+function devApi(): Plugin {
   return {
-    name: "qpay-dev-onboarding",
+    name: "qrypt-dev-api",
     configureServer(server) {
       const operatorKeyFile = resolve(ROOT, ".qpay/deployer.hex")
       if (!process.env.ONBOARD_KEY && existsSync(operatorKeyFile)) {
         process.env.ONBOARD_KEY = readFileSync(operatorKeyFile, "utf8").trim()
       }
-      server.middlewares.use("/api/onboard", async (req, res) => {
+      loadEnvFile(resolve(ROOT, ".env.local"))
+      server.middlewares.use("/api", async (req, res, next) => {
+        const url = new URL(req.url ?? "/", "http://localhost")
+        const name = url.pathname.replace(/^\/+|\/+$/g, "")
+        if (!/^[a-z-]+$/.test(name) || !existsSync(resolve(import.meta.dirname, `api/${name}.ts`))) return next()
         const chunks: Buffer[] = []
         for await (const chunk of req) chunks.push(chunk as Buffer)
-        const { POST } = await server.ssrLoadModule("/api/onboard.ts")
-        const response: Response = await POST(
-          new Request("http://localhost/api/onboard", { method: req.method, body: Buffer.concat(chunks), headers: { "content-type": "application/json" } }),
+        const handlers = await server.ssrLoadModule(`/api/${name}.ts`)
+        const handler = handlers[req.method ?? "GET"]
+        if (!handler) {
+          res.statusCode = 405
+          return res.end()
+        }
+        const hasBody = req.method !== "GET" && req.method !== "HEAD"
+        const response: Response = await handler(
+          new Request(`http://localhost/api/${name}${url.search}`, {
+            method: req.method,
+            body: hasBody ? Buffer.concat(chunks) : undefined,
+            headers: { "content-type": "application/json" },
+          }),
         )
         res.statusCode = response.status
-        res.setHeader("content-type", "application/json")
+        res.setHeader("content-type", response.headers.get("content-type") ?? "application/json")
         res.end(await response.text())
       })
     },
@@ -31,7 +54,7 @@ function devOnboarding(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), devOnboarding()],
+  plugins: [react(), tailwindcss(), devApi()],
   resolve: {
     alias: {
       "@": resolve(import.meta.dirname, "./src"),

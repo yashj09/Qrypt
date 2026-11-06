@@ -165,13 +165,17 @@ export function useWallet() {
   }
 
   const actions = {
-    async create() {
-      if (!deployment) return
+    /** Creates the account for the key store's seed; returns its address, or null if it failed (the error is shown). */
+    async create(): Promise<Address | null> {
+      if (!deployment) return null
       setError(null)
       try {
-        selectAccount(await createAccount(deployment, setStage))
+        const created = await createAccount(deployment, setStage)
+        selectAccount(created)
+        return created
       } catch (e) {
         setError(message(e))
+        return null
       } finally {
         setStage(null)
       }
