@@ -6,7 +6,7 @@ Eyrie
 
 ## Short description (one line)
 
-Post-quantum USDC payments on EIP-8141 frame transactions: a Falcon-512 account with 0 ETH pays gas in USDC, admitted by an ERC-8421 alt mempool.
+A post-quantum wallet on EIP-8141: a Falcon-512 account with 0 ETH pays gas in USDC, connects to dapps by popup or Chrome extension, and is admitted by an ERC-8421 alt mempool.
 
 ## Description
 
@@ -27,6 +27,12 @@ The app sends the same signed transaction to three places and shows the live res
 
 The app then shows the per-frame gas from the receipt. A tampered signature is rejected in VERIFY, and so is an underpaid fee. Nothing is charged in either case.
 
+Payments are where it starts; Eyrie is a whole wallet on the same transactions:
+- **Any asset:** send and receive USDC, ETH and any ERC-20, with a QR receive screen and an activity list read from chain logs.
+- **Dapps:** a popup provider that needs nothing installed, and a Chrome extension that dapps discover through EIP-6963. Both open one approval page that holds the key. A demo dapp at `/dapp` connects, signs in, and claims test tokens.
+- **Sign in with Eyrie:** messages and typed data are signed with Falcon-512, and dapps verify them onchain through the account's ERC-1271.
+- **Key safety:** a password-encrypted backup file that is checked onchain on restore, key rotation signed by the old key, and closing the account (unstake and sweep) in one transaction.
+
 ## How it's made
 
 - **Contracts (Solidity, Foundry):**
@@ -39,7 +45,9 @@ The app then shows the per-frame gas from the receipt. A tampered signature is r
   - Verification uses ZKNOX ETHFALCON's experimental `falcon_core8`, behind an ERC-7913-style adapter we wrote.
   - A converter contract turns the signer's coefficient-domain key into the verifier's NTT-domain key once, with a free `eth_call`.
 - **Mempool:** a fork of forshtat/mempool-workshop-sidecar with ERC-8421 BUDGET-010, meaning per-entity gas sums, a staked ceiling, and a stake check. It relays admitted transactions to ethrex through `ethrex_submitPrivilegedFrameTransaction`.
-- **Client:** a TypeScript frame-transaction builder on the devnet's wire layout. In it, the Falcon signature sits in an ARBITRARY signature entry, which is left out of the signature hash. The client is built with viem, Vite, React, shadcn/ui on Base UI, and Motion. It has a landing page and the app: a light wallet surface plus a dark "under the hood" inspector that shows the live mempool verdicts, per-frame gas against the 100k cap, and stress tests.
+- **Client:** a TypeScript frame-transaction builder on the devnet's wire layout. In it, the Falcon signature sits in an ARBITRARY signature entry, which is left out of the signature hash. The client is built with viem, Vite, React, shadcn/ui on Base UI, and Motion. It has a landing page and the app: a light wallet surface plus a dark "under the hood" inspector that shows the live mempool verdicts, per-frame gas against the 100k cap, and stress tests. The transaction builder takes any list of calls after the three fixed frames, which is what every wallet feature builds on.
+- **Connect:** an EIP-1193 popup provider, a `/connect` approval page, and an MV3 Chrome extension (EIP-6963) that relays to that page through `externally_connectable`, so keys never leave the wallet's origin. The extension is tested end to end with Playwright's Chromium against the live devnet.
+- **Account v2:** `receive()`, `rotateKey` callable only by the account itself, and ERC-1271. Solidity routes empty-calldata calls to `receive()`, so a zero-value one runs the VERIFY logic.
 - **Infrastructure:**
   - The demo runs on the public alt-mempool devnet (chain 1337).
   - We also have a local fallback devnet: ethrex plus Lighthouse through Kurtosis.
@@ -65,6 +73,8 @@ Both are in one transaction. The canonical mempool rejects it. We admit it on th
 ## Links
 
 - Live app: https://qpay-psi.vercel.app
+- Demo dapp: https://qpay-psi.vercel.app/dapp
+- Chrome extension (load unpacked): https://qpay-psi.vercel.app/eyrie-extension.zip
 - Repo: https://github.com/yashj09/qpay
 - Sidecar fork (BUDGET-010): https://github.com/yashj09/mempool-workshop-sidecar/tree/budget-010
 - Upstream PR: https://github.com/forshtat/mempool-workshop-sidecar/pull/2

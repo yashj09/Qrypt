@@ -33,3 +33,23 @@ Each entry gives the date, the decision, and why. Newest last.
 **Libraries: shadcn/ui on Base UI plus Motion, nothing else.** No Radix (the project already uses Base UI primitives), no Magic UI or Aceternity (decorative effects read as generic), no router (two routes, and `/app` is lazy-loaded so the landing page ships no viem or Falcon code).
 
 **`lib/qpay.ts` only gained additive changes** (an onboarding progress callback and `estimateFee`), so the send path the judges use didn't change.
+
+## 6 Nov (night): a full wallet
+
+**Transactions are a list of calls.** `buildWalletTx` emits `[Falcon VERIFY, paymaster VERIFY, repay USDC, ...calls]`. The paymaster only inspects the frame after it, so any asset send, dapp call, key rotation or sweep needs no new contract. This replaced the fixed four-frame payment, which was a special case.
+
+**Account v2, not a new contract family.** `receive()`, `rotateKey` and ERC-1271 were added to `QPayAccount`, and only the factory layer was redeployed (`pnpm deploy:account`): the verifier, USDC, paymaster and registry are unchanged. One trap: Solidity sends every empty-calldata call to `receive()`, including the zero-value VERIFY frame. So `receive()` runs the VERIFY logic when `msg.value == 0`, and accepts ETH otherwise.
+
+**Closing an account needs no contract code.** The account calls the registry's `unlockStake` and `withdrawStake` from SENDER frames; with an unstake delay of 0, both fit in one transaction, followed by the sweeps.
+
+**The fee bound is deliberately generous.** A frame carrying ETH and no calldata came out 2.9k gas over our `max_cost` model, and the paymaster rejected it with `FeeTooLow`. The bound now adds 9k gas per value frame and 2% overall, which is about 0.0003 USDC per transaction. Underpaying makes a transaction fail; overpaying by a fraction of a cent doesn't.
+
+**Dapp connect has one approval page and two ways in.** The `/connect` page on the wallet's origin is the only code that touches the Falcon key. The popup provider reaches it with `window.open` and `postMessage`. The extension is a key-less relay that opens the same page and gets the answer back through `externally_connectable`. We rejected a self-contained extension wallet with its own key store: it would mean two accounts, two approval UIs, and a key in extension storage. In both flavours the requesting origin comes from the browser, never from the dapp.
+
+**Sign-in uses ERC-1271, not ECDSA recovery.** A Falcon signature can't be `ecrecover`ed, so dapps call the account's `isValidSignature`. It costs about 0.7M gas, but it's free in an `eth_call`.
+
+**Activity comes from chain logs.** `Transfer` events in and out, plus the devnet's EIP-7708 ETH transfer logs from `0xff…fe`, so the history follows the account to any device. Local storage keeps only attempts that never reached the chain.
+
+**Key backup is a password-encrypted file, made in the browser.** It uses PBKDF2-SHA-256 at 600k rounds and AES-GCM, through WebCrypto with no dependency. Restoring compares the decrypted key with the account's onchain `falconPubkey`, so a backup that was rotated away is refused rather than silently installed.
+
+**Extension testing is automated.** `pnpm test:extension` loads the unpacked extension in Playwright's Chromium and runs discover, connect, sign-in and claim against the live devnet.

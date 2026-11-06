@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button"
 import { links } from "@/lib/site"
 
 const NAV = [
+  { href: "#wallet", label: "Wallet" },
   { href: "#how", label: "How it works" },
   { href: "#mempool", label: "Alt mempool" },
   { href: "#security", label: "Security" },
-  { href: "#builders", label: "Builders" },
+  { href: "/dapp", label: "Dapp demo" },
 ]
 
 export function Nav() {

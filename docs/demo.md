@@ -41,13 +41,23 @@ Open the **Stress tests** tab in the inspector.
 - **Tamper signature.** The transaction is rejected at frame 0 with `BadFalconSignature()`. Nothing is charged, and the balance is unchanged.
 - **Underpay gas fee.** The transaction is rejected at frame 1 with `FeeTooLow(fee, quote)`. The paymaster's rule is enforced by code, not by a server.
 
-## 3:00 to 3:40. Proof
+## 3:00 to 3:30. It's a whole wallet
 
-Switch to the explorer tab. Show the stock node's rejection record for our transaction, then the block that included it on the public devnet. Point at the README numbers: about 700k gas for the Falcon VERIFY (7x the canonical cap), 28k for the paymaster VERIFY, and a fee of about $0.017.
+Open https://qpay-psi.vercel.app/dapp in a new tab, with the extension loaded.
 
-## 3:40 to 4:00. Close
+1. The dapp lists **Eyrie** (found through EIP-6963). Click **Connect**; approve in the Eyrie window.
+2. **Sign in with Eyrie.** "Signature verified onchain via ERC-1271": a Falcon signature, checked by the account itself.
+3. **Claim 50 tEUR.** The dapp sent a plain `eth_sendTransaction`; Eyrie turned it into a frame transaction and paid the gas in USDC. Switch back to the wallet: tEUR is in the asset list and the activity.
 
-> "Eyrie is a post-quantum USDC wallet with zero ETH and no middlemen. It works today on the public devnet because the alt mempool can admit expensive validation for staked accounts. That's the exact case the EF prize describes. Our BUDGET-010 patch is the piece that makes it possible."
+> "Any dapp that speaks EIP-1193 works, by popup or extension. The key never leaves the wallet."
+
+## 3:30 to 3:45. Proof
+
+Switch to the explorer tab and show the block that included our transaction on the public devnet. Point at the README numbers: about 700k gas for the Falcon VERIFY, 7x the canonical cap.
+
+## 3:45 to 4:00. Close
+
+> "Eyrie is a post-quantum wallet with zero ETH and no middlemen: payments, any token, dapps, backup and key rotation. It works today on the public devnet because the alt mempool can admit expensive validation for staked accounts. That's the exact case the EF prize describes. Our BUDGET-010 patch is the piece that makes it possible."
 
 ## Likely questions
 

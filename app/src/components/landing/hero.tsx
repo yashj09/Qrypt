@@ -28,8 +28,8 @@ export function Hero() {
             Pay in dollars. <span className="font-serif font-normal italic">Signed for the post-quantum era.</span>
           </h1>
           <p className="max-w-xl text-lg text-pretty text-muted-foreground">
-            Eyrie sends USDC from an account secured by a Falcon-512 post-quantum signature. Gas is paid in USDC inside the
-            same transaction, so you never hold ETH.
+            Eyrie is a post-quantum wallet. Every transaction is signed with Falcon-512 and pays its gas in USDC, so you
+            never need ETH. Send and receive any token, and connect to dapps with a popup or the extension.
           </p>
           <div className="flex flex-wrap gap-3">
             <Button size="lg" nativeButton={false} render={<a href="/app" />}>

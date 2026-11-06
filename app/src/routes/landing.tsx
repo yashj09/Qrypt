@@ -2,6 +2,7 @@ import { ArrowRightIcon } from "lucide-react"
 import { Wordmark } from "@/components/brand/logo"
 import { Button } from "@/components/ui/button"
 import { Builders } from "@/components/landing/builders"
+import { Features } from "@/components/landing/features"
 import { Hero } from "@/components/landing/hero"
 import { How } from "@/components/landing/how"
 import { Mempool } from "@/components/landing/mempool"
@@ -17,6 +18,7 @@ export default function Landing() {
       <main>
         <Hero />
         <Why />
+        <Features />
         <How />
         <Mempool />
         <Security />
@@ -26,7 +28,7 @@ export default function Landing() {
             <h2 className="text-4xl font-semibold tracking-tight lg:text-5xl">
               Your dollars, <span className="font-serif font-normal italic">post-quantum.</span>
             </h2>
-            <p className="text-muted-foreground">About 15 seconds. No wallet, no ETH. Devnet with test USDC.</p>
+            <p className="text-muted-foreground">About 15 seconds. Nothing to install, no ETH. Devnet with test tokens.</p>
             <Button size="lg" nativeButton={false} render={<a href="/app" />}>
               Create an account
               <ArrowRightIcon data-icon="inline-end" />

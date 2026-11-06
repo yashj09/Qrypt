@@ -82,3 +82,21 @@ Until you redeploy, judges' transactions still land through the organisers' host
 **After a devnet reset,** run the reset steps above. Then update `QPAY_FACTORY` from the new `deployments/1337.json`, commit, and redeploy. The deployment JSON is bundled into the app.
 
 **Factory float:** each new account uses 0.02 ETH of stake from `QPayFactory`. The factory was funded with 4 ETH, enough for about 200 accounts. Top it up with a plain transfer from the deployer key.
+
+## Changing the account contract
+
+The factory embeds the account's code, so a change to `QPayAccount` means a new factory. Everything else stays.
+
+```sh
+pnpm build:contracts
+QPAY_NODE_RPC=https://altmempool.forshtat.com pnpm deploy:account   # new tEUR, factory (4 ETH float), demo account
+printf '%s' "<new factory from deployments/1337.json>" | npx vercel env add QPAY_FACTORY production --force
+printf '%s' "<new factory from deployments/1337.json>" | npx vercel env add QPAY_FACTORY preview --force
+npx vercel deploy --prod --yes   # run from the repo root, not app/
+```
+
+Accounts made by the old factory keep working on chain, but the app looks up accounts per factory, so users onboard again. Their Falcon key is reused.
+
+## Extension
+
+`pnpm pack:extension` rebuilds `app/public/eyrie-extension.zip`. `pnpm test:extension` checks it end to end, with `pnpm app` running. The extension's `externally_connectable` list must include the wallet's origin; it lists production and `localhost:5180`.

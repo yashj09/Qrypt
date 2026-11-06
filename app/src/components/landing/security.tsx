@@ -7,6 +7,7 @@ const REAL = [
   "Every payment runs on the public EIP-8141 devnet and lands in a block you can inspect",
   "The Falcon private key is generated in your browser and never sent anywhere",
   "Mempool verdicts, frame gas and balances in the app are live responses, not mocks",
+  "Key backups are encrypted in the browser, and restoring checks the key against the account onchain",
   "Account, paymaster, client and sidecar rule are open source under MIT",
 ]
 
@@ -14,6 +15,8 @@ const NOT_YET = [
   "Devnet only, with test USDC. Nothing here touches mainnet",
   "The ZKNOX falcon8 verifier is experimental and unaudited. Swapping it is one immutable address",
   "Each account locks 0.02 ETH of refundable stake to earn the larger validation budget",
+  "Lose both the browser and the backup file and the account is gone: there are no guardians or social recovery yet",
+  "The extension isn't in the Chrome Web Store; you load it unpacked",
   "The paymaster charges the maximum fee and doesn't refund unused gas yet",
 ]
 

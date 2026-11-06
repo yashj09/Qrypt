@@ -1,10 +1,10 @@
 # Eyrie
 
-**Post-quantum USDC payments on EIP-8141 frame transactions. Zero ETH, zero middlemen.**
+**The post-quantum wallet on EIP-8141. Falcon-512 signatures, gas paid in USDC, zero ETH, zero middlemen.**
 
 Eyrie was called Q-Pay while we built it, so the repo, the contracts (`QPayAccount` and the rest) and the `@qpay/*` packages keep that name.
 
-A brand-new account that holds only USDC sends a payment. A **Falcon-512** signature authorizes it, and there is no ECDSA key anywhere. A permissionless paymaster pays the gas and takes it back **in USDC inside the same transaction**. There is no bundler, relayer or paymaster server: the validation rules are code running in VERIFY frames.
+Eyrie is a smart-account wallet whose only key is **Falcon-512**; there is no ECDSA key anywhere. Payments are its first job: a brand-new account that holds only USDC sends a payment. A permissionless paymaster pays the gas and takes it back **in USDC inside the same transaction**. There is no bundler, relayer or paymaster server: the validation rules are code running in VERIFY frames.
 
 | | |
 |---|---|
@@ -47,9 +47,23 @@ The devnet can be reset at any time. If it has been, `pnpm setup` and `pnpm send
 | Falcon signing in the browser | 3–7 ms |
 | Sender's ETH before and after | 0, then 0 |
 
+## The wallet
+
+| Feature | How |
+|---|---|
+| Send and receive any asset | USDC, ETH and any ERC-20 you add. Receive shows your address as a QR code. Activity is read from chain logs, including ETH through the devnet's EIP-7708 transfer logs |
+| Gas in USDC | Every transaction is `[Falcon VERIFY, paymaster VERIFY, repay USDC, ...your calls]`. The paymaster only checks the frame after it, so the calls can be anything |
+| Connect to dapps | **Popup:** an EIP-1193 provider opens `/connect` in a popup, nothing installed. **Extension:** an MV3 Chrome extension injects an EIP-1193 provider and announces it through EIP-6963; approvals open the same `/connect` page. Try both at [/dapp](https://qpay-psi.vercel.app/dapp) |
+| Sign in with Eyrie | `personal_sign` and `eth_signTypedData_v4` return a Falcon signature over the EIP-191/712 hash; the account's `isValidSignature` (ERC-1271) checks it onchain |
+| Back up and restore | A password-encrypted file (PBKDF2-SHA-256, 600k rounds, AES-GCM), made and read in the browser. Restore checks onchain that the key still controls the account |
+| Rotate the key | A transaction signed by the current key calls `rotateKey`, which only the account itself can call. The old key and old backups stop working |
+| Close the account | One transaction unlocks and withdraws the stake and sweeps every balance to an address you choose |
+
+**Install the extension:** download [eyrie-extension.zip](https://qpay-psi.vercel.app/eyrie-extension.zip), unzip it, open `chrome://extensions`, turn on Developer mode and choose "Load unpacked". It isn't in the Chrome Web Store.
+
 ## Live demo for judges
 
-**https://qpay-psi.vercel.app** is the landing page. **https://qpay-psi.vercel.app/app** creates your own post-quantum account in your browser and sends USDC with 0 ETH. The Falcon key never leaves your device. Our BUDGET-010 sidecar runs on the presenter's laptop behind a tunnel. If it's offline, the organisers' hosted alt mempool still carries the transaction.
+**https://qpay-psi.vercel.app** is the landing page. **https://qpay-psi.vercel.app/app** creates your own post-quantum account in your browser and sends USDC with 0 ETH. **https://qpay-psi.vercel.app/dapp** is a demo third-party dapp: connect, sign in (verified onchain by ERC-1271) and claim test euros through Eyrie. The Falcon key never leaves your device. Our BUDGET-010 sidecar runs on the presenter's laptop behind a tunnel. If it's offline, the organisers' hosted alt mempool still carries the transaction.
 
 **Is a 700k-gas VERIFY frame fair to mempool nodes and builders?** Yes, with measured numbers, and without breaking CROPS: see [docs/mempool-safety.md](docs/mempool-safety.md).
 
@@ -57,7 +71,7 @@ The devnet can be reset at any time. If it has been, `pnpm setup` and `pnpm send
 
 See [docs/architecture.md](docs/architecture.md) for the full picture. In short:
 
-1. The app builds four frames: the account's VERIFY (Falcon), the paymaster's VERIFY (USDC repayment check), a SENDER `usdc.transfer(paymaster, fee)`, and a SENDER `usdc.transfer(recipient, amount)`.
+1. The app builds the frames: the account's VERIFY (Falcon), the paymaster's VERIFY (USDC repayment check), a SENDER `usdc.transfer(paymaster, fee)`, then one SENDER frame per call. A payment is one call, `usdc.transfer(recipient, amount)`; a dapp's `eth_sendTransaction` is one call to whatever it asked for.
 2. It signs the frame transaction's signature hash with Falcon-512 in the browser, and puts the 1064-byte signature in an ARBITRARY signature entry. That entry is left out of the hash.
 3. `QPayAccount` reads the hash (`TXPARAM`) and the signature (`SIGDATACOPY`) inside its VERIFY frame, checks them with the ZKNOX falcon8 verifier, and approves execution.
 4. `UsdcPaymaster` introspects the next frame (`FRAMEDATALOAD`), checks the fee against `TXPARAM.MAX_COST` and checks the sender's USDC balance, then approves payment.
@@ -83,6 +97,12 @@ QPAY_NODE_RPC=https://altmempool.forshtat.com pnpm send 0xRecipient 5 --tamper  
 
 # the demo app
 QPAY_NODE_RPC=https://altmempool.forshtat.com pnpm app
+
+# after changing QPayAccount: redeploy only the factory layer (factory, tEUR, demo account)
+QPAY_NODE_RPC=https://altmempool.forshtat.com pnpm deploy:account
+
+# rebuild the extension zip the landing page serves
+pnpm pack:extension
 ```
 
 `devnet/up.sh` starts a local ethrex and Lighthouse devnet through Kurtosis, as an alternative to the public one.
@@ -91,6 +111,9 @@ QPAY_NODE_RPC=https://altmempool.forshtat.com pnpm app
 
 ```sh
 cd contracts/falcon && forge test   # noble Falcon signatures verify; tampering is rejected
+pnpm test:contracts                  # account v2: receive ETH, rotateKey only from itself, ERC-1271
+pnpm test:extension                  # needs `pnpm app` running: Playwright Chromium loads the unpacked
+                                     # extension, onboards, connects via EIP-6963, signs in, claims tEUR
 ```
 
 ## Trade-offs and limits
@@ -99,7 +122,9 @@ cd contracts/falcon && forge test   # noble Falcon signatures verify; tampering 
 - The account stakes 0.02 ETH, which is refundable, so its expensive validation gets the staked budget. Its spendable ETH is 0.
 - The paymaster charges on the transaction's maximum cost, not on gas actually used. A post-op refund frame would fix this.
 - The sidecar rule is a patch on the workshop sidecar. ERC-8421 BUDGET-010 is still a draft, and its numbers may change.
-- The demo Falcon seed sits in `.qpay/` on the presenter's laptop, and the dev server reads it so the browser can sign.
+- The Falcon key lives in the browser's local storage. The backup file covers a lost browser, but there are no guardians or social recovery: lose both and the account is gone.
+- The extension is loaded unpacked, and its approvals use the hosted wallet's origin, so it needs that site reachable.
+- The fee bound adds 2% over our model of `max_cost`, because the chain's accounting has terms we don't model exactly. That's about 0.0003 USDC per transaction.
 
 ## Built on
 

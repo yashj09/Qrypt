@@ -19,4 +19,10 @@
 - [x] App shows per-frame gas from the onchain receipt (Falcon VERIFY 676k–724k, 6.8–7.2x the canonical cap).
 - [x] README proof table and measured numbers, `docs/runbook.md`, `docs/demo.md`, `docs/submission.md`.
 - [x] Redesign as **Eyrie**: landing page at `/`, app at `/app` with a light wallet and a dark under-the-hood inspector (mempool verdicts, gas bars against the 100k cap, stress tests), onboarding stepper, review step, receipt and activity list. Verified on production in incognito: onboard, send included in block 2747 with 0 wei ETH spent, tamper rejected at frame 0.
+- [x] Full wallet, each part verified on the live devnet:
+  - any asset: tEUR send (block 6409) and ETH send (block 6432), receive with QR, activity from chain logs;
+  - account v2 redeployed: receive ETH, key rotation (block 6466; the new key's send landed in 6471, and the old key is rejected with `BadFalconSignature`), ERC-1271;
+  - backup and restore in a fresh profile (a wrong password is caught, and a rotated-away backup is refused), then close account (block 6484; stake and balances are 0);
+  - popup connect: connect, ERC-1271 sign-in, tEUR claim (block 6529);
+  - Chrome extension: `pnpm test:extension` passes, with the claim in block 6582.
 - [ ] Demo video (you record it), slides, and the dashboard submission.

@@ -9,6 +9,7 @@ export const links = {
   contracts: "https://github.com/yashj09/qpay/tree/main/contracts/src",
   frametx: "https://github.com/yashj09/qpay/tree/main/packages/frametx",
   sidecarFork: "https://github.com/yashj09/mempool-workshop-sidecar/tree/budget-010",
+  connect: "https://github.com/yashj09/qpay/tree/main/extension",
 }
 
 export const explorerTx = (hash: string, node: string) =>
