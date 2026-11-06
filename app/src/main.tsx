@@ -5,15 +5,21 @@ import { MotionConfig } from "motion/react"
 import "./index.css"
 import Landing from "@/routes/landing"
 
-const AppPage = lazy(() => import("@/routes/app"))
-const isApp = window.location.pathname.replace(/\/+$/, "") === "/app"
+/** Every route but the landing page is lazy, so the landing page ships no viem or Falcon code. */
+const ROUTES: Record<string, React.LazyExoticComponent<() => React.JSX.Element>> = {
+  "/app": lazy(() => import("@/routes/app")),
+  "/connect": lazy(() => import("@/routes/connect")),
+  "/dapp": lazy(() => import("@/routes/dapp")),
+}
+
+const Page = ROUTES[window.location.pathname.replace(/\/+$/, "")]
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <MotionConfig reducedMotion="user">
-      {isApp ? (
+      {Page ? (
         <Suspense fallback={null}>
-          <AppPage />
+          <Page />
         </Suspense>
       ) : (
         <Landing />

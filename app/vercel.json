@@ -8,6 +8,14 @@
     {
       "source": "/app",
       "destination": "/index.html"
+    },
+    {
+      "source": "/connect",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/dapp",
+      "destination": "/index.html"
     }
   ]
 }
