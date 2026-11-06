@@ -45,6 +45,21 @@ async function main() {
     await dash.locator("aside").waitFor({ timeout: 15_000 });
     step("the right password unlocks");
 
+    const popup = await context.newPage();
+    await popup.setViewportSize({ width: 360, height: 600 });
+    await popup.goto(extensionUrl(id, "popup.html"));
+    await popup.getByText("Assets").waitFor({ timeout: 30_000 });
+    await popup.waitForTimeout(3000);
+    if (process.env.EYRIE_SHOTS) await popup.screenshot({ path: `${process.env.EYRIE_SHOTS}/popup.png` });
+    await popup.getByRole("button", { name: "Send", exact: true }).click();
+    await popup.locator("#amount").fill("1");
+    await popup.getByRole("button", { name: "Review USDC payment" }).click();
+    await popup.getByRole("button", { name: "Sign and send" }).click();
+    const included = popup.getByText(/Included in block \d+/);
+    await included.waitFor({ timeout: 90_000 });
+    step(`popup sent 1 USDC, ${(await included.textContent())?.toLowerCase()}`);
+    if (process.env.EYRIE_SHOTS) await popup.screenshot({ path: `${process.env.EYRIE_SHOTS}/popup-sent.png` });
+
     const sealed = await worker.evaluate(async () => JSON.stringify(await chrome.storage.local.get("eyrie.vault")));
     if (!sealed.includes('"ct"') || /"seed":"0x[0-9a-f]{64}"/.test(sealed)) throw new Error("vault isn't sealed");
     step("the seed is stored only as AES-GCM ciphertext");
