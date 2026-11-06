@@ -7,11 +7,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
 import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item"
 import { Spinner } from "@/components/ui/spinner"
-import { createEyriePopupProvider, type Eip1193Provider } from "@/lib/connect/popup-provider"
+import { createQryptPopupProvider, type Eip1193Provider } from "@/lib/connect/popup-provider"
 import { NODE_RPC } from "@/lib/site"
 import { short, units } from "@/lib/format"
 
-/** This page plays an unrelated third-party dapp. It knows Eyrie only as an EIP-1193 provider. */
+/** This page plays an unrelated third-party dapp. It knows Qrypt only as an EIP-1193 provider. */
 
 interface Deployment {
   chainId: number
@@ -61,7 +61,7 @@ interface LogLine {
 export default function DappPage() {
   const announced = useAnnouncedWallets()
   const popup = useMemo<Wallet>(
-    () => ({ id: "eyrie-popup", name: "Eyrie (popup, nothing to install)", provider: createEyriePopupProvider({ walletUrl: window.location.origin, rpcUrl: NODE_RPC }) }),
+    () => ({ id: "qrypt-popup", name: "Qrypt (popup, nothing to install)", provider: createQryptPopupProvider({ walletUrl: window.location.origin, rpcUrl: NODE_RPC }) }),
     [],
   )
   const wallets = [...announced, popup]
@@ -106,7 +106,7 @@ export default function DappPage() {
     }
   }
 
-  const signInWithEyrie = async () => {
+  const signInWithQrypt = async () => {
     if (!wallet || !address) return
     setBusy("sign")
     setSignIn(null)
@@ -208,9 +208,9 @@ export default function DappPage() {
               </CardDescription>
             </CardHeader>
             <CardFooter className="flex-col items-stretch gap-3">
-              <Button disabled={!address || busy !== null} onClick={signInWithEyrie}>
+              <Button disabled={!address || busy !== null} onClick={signInWithQrypt}>
                 {busy === "sign" ? <Spinner data-icon="inline-start" /> : <LogInIcon data-icon="inline-start" />}
-                Sign in with Eyrie
+                Sign in with Qrypt
               </Button>
               {signIn && (
                 <Badge variant={signIn.verified ? "success" : "destructive"}>
@@ -223,7 +223,7 @@ export default function DappPage() {
           <Card>
             <CardHeader>
               <CardTitle>Claim 50 tEUR</CardTitle>
-              <CardDescription>The dapp asks for a plain eth_sendTransaction. Eyrie turns it into a frame transaction and pays the gas in USDC.</CardDescription>
+              <CardDescription>The dapp asks for a plain eth_sendTransaction. Qrypt turns it into a frame transaction and pays the gas in USDC.</CardDescription>
             </CardHeader>
             <CardFooter className="flex-col items-stretch gap-3">
               <Button disabled={!address || busy !== null || !token} onClick={claimTokens}>

@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Eyrie",
+  "name": "Qrypt",
   "version": "0.1.0",
   "description": "The post-quantum wallet for EIP-8141: Falcon-512 keys, gas paid in USDC, no ETH needed.",
   "icons": {
@@ -8,7 +8,7 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Eyrie",
+    "default_title": "Qrypt",
     "default_icon": {
       "128": "icon-128.png"
     }

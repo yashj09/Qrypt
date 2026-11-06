@@ -1,11 +1,11 @@
 // Runs in the page's own world: the EIP-1193 provider dapps call, announced through EIP-6963.
 (() => {
-  if (window.eyrie) return
-  const CHANNEL = "eyrie-extension"
+  if (window.qrypt) return
+  const CHANNEL = "qrypt-extension"
   const ICON =
     "data:image/svg+xml;base64," +
     btoa(
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#1c1b18"/><g fill="#f7f5f0" transform="translate(2.4 2.2) scale(0.8)"><circle cx="12" cy="10.2" r="3.6"/><circle cx="3.5" cy="8.5" r="1.35"/><circle cx="20.5" cy="8.5" r="1.35"/><circle cx="4.6" cy="13" r="1.35"/><circle cx="19.4" cy="13" r="1.35"/><circle cx="7.4" cy="16.8" r="1.35"/><circle cx="16.6" cy="16.8" r="1.35"/><circle cx="12" cy="18.6" r="1.35"/></g></svg>',
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#1c1b18"/><g fill="#f7f5f0" transform="translate(2.6 2.6) scale(0.85)"><circle cx="11.00" cy="3.40" r="1.45"/><circle cx="14.80" cy="4.42" r="1.45"/><circle cx="17.58" cy="7.20" r="1.45"/><circle cx="18.60" cy="11.00" r="1.45"/><circle cx="17.58" cy="14.80" r="1.45"/><circle cx="14.80" cy="17.58" r="1.45"/><circle cx="11.00" cy="18.60" r="1.45"/><circle cx="7.20" cy="17.58" r="1.45"/><circle cx="4.42" cy="14.80" r="1.45"/><circle cx="3.40" cy="11.00" r="1.45"/><circle cx="4.42" cy="7.20" r="1.45"/><circle cx="7.20" cy="4.42" r="1.45"/><circle cx="11" cy="11" r="2.6"/><circle cx="16.6" cy="16.6" r="1.6"/><circle cx="19.4" cy="19.4" r="1.8"/></g></svg>',
     )
   const target = window.location.origin === "null" ? "*" : window.location.origin
   const pending = new Map()
@@ -24,7 +24,7 @@
   })
 
   const provider = {
-    isEyrie: true,
+    isQrypt: true,
     request({ method, params = [] }) {
       const id = ++nextId
       return new Promise((resolve, reject) => {
@@ -48,12 +48,12 @@
     },
   }
 
-  const info = Object.freeze({ uuid: crypto.randomUUID(), name: "Eyrie", icon: ICON, rdns: "app.eyrie.wallet" })
+  const info = Object.freeze({ uuid: crypto.randomUUID(), name: "Qrypt", icon: ICON, rdns: "money.qrypt.wallet" })
   const announce = () =>
     window.dispatchEvent(new CustomEvent("eip6963:announceProvider", { detail: Object.freeze({ info, provider }) }))
   window.addEventListener("eip6963:requestProvider", announce)
   announce()
 
-  window.eyrie = provider
+  window.qrypt = provider
   if (!window.ethereum) Object.defineProperty(window, "ethereum", { value: provider, configurable: true })
 })()

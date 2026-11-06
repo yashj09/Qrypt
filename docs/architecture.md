@@ -54,9 +54,9 @@ The fork branch is [yashj09/mempool-workshop-sidecar@budget-010](https://github.
 ## Connecting dapps
 
 ```
-dapp page                 web wallet (no install)                       Eyrie extension
+dapp page                 web wallet (no install)                       Qrypt extension
 ─────────                 ───────────────────────                       ───────────────
-EIP-1193 request ──▶ createEyriePopupProvider               inpage.js (EIP-6963 announce) ─▶ content.js ─▶ background.js
+EIP-1193 request ──▶ createQryptPopupProvider               inpage.js (EIP-6963 announce) ─▶ content.js ─▶ background.js
                      window.open(/connect)                               chrome.windows.create(approve.html?rid=…)
                             │ postMessage (origin from browser)                  │ chrome.runtime messages (origin from sender tab)
                             ▼                                                    ▼

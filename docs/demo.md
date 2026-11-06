@@ -30,7 +30,7 @@ Switch back to **Mempools**. Press **Review payment**: the dialog shows the fee 
 Read out the three gates as they fill in:
 1. **Canonical, rejected.** "Prefix gas budget exceeds MAX_VERIFY_GAS. That's EIP-8141's 100k rule."
 2. **Hosted alt mempool, admitted.** "The organisers lifted all validation limits on this node mid-event. Before that it rejected us with '1,050,100 exceeds 100,000', and the explorer still has that record. Unlimited isn't a rule a public mempool can keep."
-3. **Eyrie alt mempool, admitted, then OnChain.** "Ours admits it under a bounded budget. We implemented the ERC-8421 draft's per-entity budget. The staked account gets up to 1M, and the unstaked paymaster stays under 100k. We sent it upstream as a PR."
+3. **Qrypt alt mempool, admitted, then OnChain.** "Ours admits it under a bounded budget. We implemented the ERC-8421 draft's per-entity budget. The staked account gets up to 1M, and the unstaked paymaster stays under 100k. We sent it upstream as a PR."
 
 The receipt card on the left shows sent 5 USDC, fee about 0.017 USDC, and **ETH spent 0 wei**. The inspector shows the block and per-frame gas; the Frames tab now shows this transaction's measured gas against the 100k cap line.
 
@@ -43,11 +43,11 @@ Open the **Stress tests** tab in the inspector.
 
 ## 3:00 to 3:30. It's a whole wallet
 
-Click the Eyrie icon in the toolbar: the same wallet as a popup. Hit **Fullscreen** for the dashboard tab, then open https://qpay-psi.vercel.app/dapp in a new tab.
+Click the Qrypt icon in the toolbar: the same wallet as a popup. Hit **Fullscreen** for the dashboard tab, then open https://qpay-psi.vercel.app/dapp in a new tab.
 
-1. The dapp lists **Eyrie** (found through EIP-6963). Click **Connect**; approve in the Eyrie window that pops up.
-2. **Sign in with Eyrie.** "Signature verified onchain via ERC-1271": a Falcon signature, checked by the account itself.
-3. **Claim 50 tEUR.** The dapp sent a plain `eth_sendTransaction`; Eyrie turned it into a frame transaction and paid the gas in USDC. Switch back to the wallet: tEUR is in the asset list and the activity.
+1. The dapp lists **Qrypt** (found through EIP-6963). Click **Connect**; approve in the Qrypt window that pops up.
+2. **Sign in with Qrypt.** "Signature verified onchain via ERC-1271": a Falcon signature, checked by the account itself.
+3. **Claim 50 tEUR.** The dapp sent a plain `eth_sendTransaction`; Qrypt turned it into a frame transaction and paid the gas in USDC. Switch back to the wallet: tEUR is in the asset list and the activity.
 
 > "Any dapp that speaks EIP-1193 works, by popup or extension. The key never leaves the wallet."
 
@@ -57,7 +57,7 @@ Switch to the explorer tab and show the block that included our transaction on t
 
 ## 3:45 to 4:00. Close
 
-> "Eyrie is a post-quantum wallet with zero ETH and no middlemen: payments, any token, dapps, backup and key rotation. It works today on the public devnet because the alt mempool can admit expensive validation for staked accounts. That's the exact case the EF prize describes. Our BUDGET-010 patch is the piece that makes it possible."
+> "Qrypt is a post-quantum wallet with zero ETH and no middlemen: payments, any token, dapps, backup and key rotation. It works today on the public devnet because the alt mempool can admit expensive validation for staked accounts. That's the exact case the EF prize describes. Our BUDGET-010 patch is the piece that makes it possible."
 
 ## Likely questions
 

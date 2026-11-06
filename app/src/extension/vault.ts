@@ -84,7 +84,7 @@ export async function createVault(password: string) {
 
 export async function unlockWithPassword(password: string) {
   const vault = await readVault()
-  if (!vault) throw new Error("There's no Eyrie wallet in this browser yet.")
+  if (!vault) throw new Error("There's no Qrypt wallet in this browser yet.")
   const w = vault.dataKey.byPassword
   let dataKey: Uint8Array
   try {

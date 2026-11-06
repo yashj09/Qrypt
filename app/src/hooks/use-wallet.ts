@@ -237,7 +237,7 @@ export function useWallet() {
       deployment
         ? {
             [deployment.stakingRegistry.toLowerCase()]: "the staking registry",
-            [deployment.factory.toLowerCase()]: "the Eyrie factory",
+            [deployment.factory.toLowerCase()]: "the Qrypt factory",
             [deployment.paymaster.toLowerCase()]: "the paymaster",
             "0x0000000000000000000000000000000000000000": "a mint",
           }

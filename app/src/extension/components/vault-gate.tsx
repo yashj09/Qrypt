@@ -63,12 +63,12 @@ function SetupPrompt() {
     <Centered>
       <LogoMark className="size-12" />
       <div className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold">Welcome to Eyrie</h1>
+        <h1 className="text-xl font-semibold">Welcome to Qrypt</h1>
         <p className="text-sm text-muted-foreground">A post-quantum wallet. Set it up in a new tab.</p>
       </div>
       <Button onClick={openOnboarding}>
         <SparklesIcon data-icon="inline-start" />
-        Set up Eyrie
+        Set up Qrypt
       </Button>
     </Centered>
   )

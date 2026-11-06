@@ -8,7 +8,7 @@ export const EXTENSION_DIST = resolve(ROOT, "extension/dist");
 
 /** A fresh Chromium profile with the built extension loaded; returns its id and service worker. */
 export async function launchWithExtension(): Promise<{ context: BrowserContext; id: string; worker: Worker }> {
-  const context = await chromium.launchPersistentContext(mkdtempSync(join(tmpdir(), "eyrie-ext-")), {
+  const context = await chromium.launchPersistentContext(mkdtempSync(join(tmpdir(), "qrypt-ext-")), {
     channel: "chromium",
     headless: true,
     viewport: { width: 1280, height: 800 },

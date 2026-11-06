@@ -69,7 +69,7 @@ function Onboarding() {
     <div className="flex min-h-svh flex-col items-center justify-center gap-8 bg-background bg-lattice p-6 text-foreground">
       <div className="flex items-center gap-3">
         <LogoMark className="size-9" />
-        <span className="text-2xl font-semibold tracking-tight">Eyrie</span>
+        <span className="text-2xl font-semibold tracking-tight">Qrypt</span>
       </div>
       <div className="w-full max-w-md">
         {error && (
@@ -88,7 +88,7 @@ function Onboarding() {
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
               <Choice icon={<SparklesIcon />} title="Create a new wallet" body="About 15 seconds. We set up an account and add 100 test USDC." onClick={() => setStep({ kind: "create" })} />
-              <Choice icon={<FileUpIcon />} title="Import a backup file" body="Bring an account from the Eyrie website or another browser." onClick={() => setStep({ kind: "import" })} />
+              <Choice icon={<FileUpIcon />} title="Import a backup file" body="Bring an account from the Qrypt website or another browser." onClick={() => setStep({ kind: "import" })} />
             </CardContent>
           </Card>
         )}
@@ -99,8 +99,8 @@ function Onboarding() {
         {step.kind === "existing" && (
           <Card>
             <CardHeader>
-              <CardTitle>Eyrie is already set up</CardTitle>
-              <CardDescription>This browser already has an Eyrie wallet. Open it from the toolbar, or here.</CardDescription>
+              <CardTitle>Qrypt is already set up</CardTitle>
+              <CardDescription>This browser already has an Qrypt wallet. Open it from the toolbar, or here.</CardDescription>
             </CardHeader>
             <CardFooter>
               <Button className="w-full" onClick={() => openFullscreen()}>
@@ -136,7 +136,7 @@ function NewPasswordFields({ password, confirm, setPassword, setConfirm }: { pas
       <Field data-invalid={tooShort || undefined}>
         <FieldLabel htmlFor="new-password">Password</FieldLabel>
         <Input id="new-password" type="password" value={password} aria-invalid={tooShort || undefined} onChange={(e) => setPassword(e.target.value)} />
-        {tooShort ? <FieldError>Use at least {MIN_PASSWORD} characters.</FieldError> : <FieldDescription>Unlocks Eyrie on this browser. At least {MIN_PASSWORD} characters.</FieldDescription>}
+        {tooShort ? <FieldError>Use at least {MIN_PASSWORD} characters.</FieldError> : <FieldDescription>Unlocks Qrypt on this browser. At least {MIN_PASSWORD} characters.</FieldDescription>}
       </Field>
       <Field data-invalid={mismatch || undefined}>
         <FieldLabel htmlFor="confirm-password">Confirm password</FieldLabel>
@@ -156,7 +156,7 @@ function PasswordCard({ disabled, onSubmit, onBack }: { disabled: boolean; onSub
     <Card>
       <CardHeader>
         <CardTitle className="text-xl">Choose a password</CardTitle>
-        <CardDescription>It encrypts your Falcon key in this browser. Eyrie locks itself after 15 idle minutes.</CardDescription>
+        <CardDescription>It encrypts your Falcon key in this browser. Qrypt locks itself after 15 idle minutes.</CardDescription>
       </CardHeader>
       <CardContent>
         <FieldGroup>
@@ -271,8 +271,8 @@ function DoneCard({ account, imported }: { account: string; imported: boolean })
             <PinIcon />
           </ItemMedia>
           <ItemContent>
-            <ItemTitle>Pin Eyrie to your toolbar</ItemTitle>
-            <ItemDescription>Click the puzzle icon next to the address bar, then the pin next to Eyrie.</ItemDescription>
+            <ItemTitle>Pin Qrypt to your toolbar</ItemTitle>
+            <ItemDescription>Click the puzzle icon next to the address bar, then the pin next to Qrypt.</ItemDescription>
           </ItemContent>
         </Item>
       </CardContent>

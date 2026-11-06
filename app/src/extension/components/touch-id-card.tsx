@@ -29,7 +29,7 @@ export function TouchIdCard() {
       const result = await enableTouchId()
       setMessage(
         result === "enabled"
-          ? "Touch ID can now unlock Eyrie. Your password still works too."
+          ? "Touch ID can now unlock Qrypt. Your password still works too."
           : "This browser made a Touch ID passkey but can't derive a key from it (it needs WebAuthn PRF, e.g. an iCloud Keychain passkey in Chrome). Password unlock stays on.",
       )
     } catch (e) {

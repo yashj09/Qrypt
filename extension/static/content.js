@@ -1,6 +1,6 @@
 // Isolated world: relays the page provider's requests to the background worker, one port per request.
 // An open port also keeps the worker alive while the user is deciding.
-const CHANNEL = "eyrie-extension"
+const CHANNEL = "qrypt-extension"
 const target = window.location.origin === "null" ? "*" : window.location.origin
 
 window.addEventListener("message", (e) => {
@@ -8,14 +8,14 @@ window.addEventListener("message", (e) => {
   const { id, method, params } = e.data
   const reply = (body) => window.postMessage({ channel: CHANNEL, dir: "to-page", id, ...body }, target)
   let answered = false
-  const port = chrome.runtime.connect({ name: "eyrie-rpc" })
+  const port = chrome.runtime.connect({ name: "qrypt-rpc" })
   port.onMessage.addListener((msg) => {
     answered = true
     reply(msg)
     port.disconnect()
   })
   port.onDisconnect.addListener(() => {
-    if (!answered) reply({ error: { code: 4900, message: "The Eyrie extension stopped responding. Try again." } })
+    if (!answered) reply({ error: { code: 4900, message: "The Qrypt extension stopped responding. Try again." } })
   })
   port.postMessage({ method, params })
 })

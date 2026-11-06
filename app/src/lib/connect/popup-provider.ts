@@ -4,7 +4,7 @@ import {
   UNSUPPORTED_CHAIN,
   USER_REJECTED,
   isApprovalMethod,
-  type EyrieResponse,
+  type QryptResponse,
   type PopupMessage,
   type RpcError,
 } from "@/lib/connect/protocol"
@@ -37,7 +37,7 @@ const fail = (e: RpcError) => new ProviderRpcError(e.code, e.message)
  * Falcon key never leaves the wallet's origin. The popup must open inside the user's click, so `request` opens it
  * before its first `await`.
  */
-export function createEyriePopupProvider({ walletUrl, rpcUrl }: { walletUrl: string; rpcUrl: string }): Eip1193Provider {
+export function createQryptPopupProvider({ walletUrl, rpcUrl }: { walletUrl: string; rpcUrl: string }): Eip1193Provider {
   const walletOrigin = new URL(walletUrl).origin
   const listeners = new Map<string, Set<Listener>>()
   const emit = (event: string, ...args: unknown[]) => listeners.get(event)?.forEach((l) => l(...args))
@@ -55,8 +55,8 @@ export function createEyriePopupProvider({ walletUrl, rpcUrl }: { walletUrl: str
   }
 
   const approve = (method: string, params: unknown[]): Promise<unknown> => {
-    const popup = window.open(`${walletUrl}/connect?transport=popup`, "eyrie-connect", "width=440,height=720")
-    if (!popup) return Promise.reject(new ProviderRpcError(4100, "The browser blocked the Eyrie popup. Allow popups and try again."))
+    const popup = window.open(`${walletUrl}/connect?transport=popup`, "qrypt-connect", "width=440,height=720")
+    if (!popup) return Promise.reject(new ProviderRpcError(4100, "The browser blocked the Qrypt popup. Allow popups and try again."))
     const id = crypto.randomUUID()
     return new Promise((resolve, reject) => {
       const done = () => {
@@ -65,13 +65,13 @@ export function createEyriePopupProvider({ walletUrl, rpcUrl }: { walletUrl: str
       }
       const onMessage = (event: MessageEvent<PopupMessage>) => {
         if (event.origin !== walletOrigin || event.source !== popup) return
-        if (event.data.type === "eyrie:ready") {
-          const message: PopupMessage = { type: "eyrie:request", request: { id, method: method as never, params } }
+        if (event.data.type === "qrypt:ready") {
+          const message: PopupMessage = { type: "qrypt:request", request: { id, method: method as never, params } }
           popup.postMessage(message, walletOrigin)
         }
-        if (event.data.type === "eyrie:response" && event.data.response.id === id) {
+        if (event.data.type === "qrypt:response" && event.data.response.id === id) {
           done()
-          const response: EyrieResponse = event.data.response
+          const response: QryptResponse = event.data.response
           if ("error" in response) reject(fail(response.error))
           else resolve(response.result)
         }

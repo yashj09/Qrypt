@@ -13,21 +13,21 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { execute, review, type Review } from "@/lib/connect/approve"
 import { channelFromLocation, type Channel } from "@/lib/connect/channel"
-import { USER_REJECTED, type EyrieRequest, type RpcError } from "@/lib/connect/protocol"
+import { USER_REJECTED, type QryptRequest, type RpcError } from "@/lib/connect/protocol"
 import { loadDeployment, storedAccount, type Deployment } from "@/lib/qpay"
 import { short, usdcAmount } from "@/lib/format"
 
 type State =
   | { kind: "loading" }
   | { kind: "no-channel" }
-  | { kind: "needs-account"; request: EyrieRequest }
-  | { kind: "review"; request: EyrieRequest; review: Review }
-  | { kind: "working"; request: EyrieRequest; review: Review }
+  | { kind: "needs-account"; request: QryptRequest }
+  | { kind: "review"; request: QryptRequest; review: Review }
+  | { kind: "working"; request: QryptRequest; review: Review }
   | { kind: "done"; approved: boolean }
   | { kind: "failed"; message: string }
 
 const TITLES: Record<Review["kind"], { title: string; action: string }> = {
-  connect: { title: "Connect to Eyrie", action: "Connect" },
+  connect: { title: "Connect to Qrypt", action: "Connect" },
   message: { title: "Sign a message", action: "Sign" },
   typed: { title: "Sign structured data", action: "Sign" },
   transaction: { title: "Approve a transaction", action: "Sign and send" },
@@ -43,7 +43,7 @@ export default function ConnectPage({ channel: given }: { channel?: Channel | nu
   const [deployment, setDeployment] = useState<Deployment | null>(null)
   const [account, setAccount] = useState<Address | null>(null)
 
-  const load = (d: Deployment, request: EyrieRequest) => {
+  const load = (d: Deployment, request: QryptRequest) => {
     const a = storedAccount(d)
     setAccount(a)
     if (!a) return setState({ kind: "needs-account", request })
@@ -71,12 +71,12 @@ export default function ConnectPage({ channel: given }: { channel?: Channel | nu
     setTimeout(() => window.close(), 1200)
   }
 
-  const reject = (request: EyrieRequest) => {
+  const reject = (request: QryptRequest) => {
     channel?.respond({ id: request.id, error: USER_REJECTED })
     finish(false)
   }
 
-  const approve = async (request: EyrieRequest, r: Review) => {
+  const approve = async (request: QryptRequest, r: Review) => {
     if (!deployment || !account || !channel) return
     setState({ kind: "working", request, review: r })
     try {
@@ -101,18 +101,18 @@ export default function ConnectPage({ channel: given }: { channel?: Channel | nu
           {state.kind === "no-channel" && (
             <Alert>
               <AlertTitle>Nothing to approve</AlertTitle>
-              <AlertDescription>This page opens when a dapp asks Eyrie to connect, sign or send.</AlertDescription>
+              <AlertDescription>This page opens when a dapp asks Qrypt to connect, sign or send.</AlertDescription>
             </Alert>
           )}
           {state.kind === "needs-account" && deployment && (
             <Card>
               <CardHeader>
-                <CardTitle>No Eyrie account in this browser</CardTitle>
+                <CardTitle>No Qrypt account in this browser</CardTitle>
                 <CardDescription>{hostOf(state.request.origin)} wants to connect. Create or restore an account first.</CardDescription>
               </CardHeader>
               <CardFooter className="flex-col items-stretch gap-2">
                 <Button nativeButton={false} render={<a href="/app" target="_blank" rel="noreferrer" />}>
-                  Open Eyrie
+                  Open Qrypt
                   <ExternalLinkIcon data-icon="inline-end" />
                 </Button>
                 <Button variant="outline" onClick={() => load(deployment, state.request)}>

@@ -10,7 +10,7 @@ import { proof } from "@/lib/site"
 const GATES = [
   { name: "Canonical mempool", rule: "100k VERIFY cap", admitted: false },
   { name: "Hosted alt mempool", rule: "organisers' node", admitted: true },
-  { name: "Eyrie alt mempool", rule: "BUDGET-010", admitted: true },
+  { name: "Qrypt alt mempool", rule: "BUDGET-010", admitted: true },
 ]
 
 export function Hero() {
@@ -28,7 +28,7 @@ export function Hero() {
             Pay in dollars. <span className="font-serif font-normal italic">Signed for the post-quantum era.</span>
           </h1>
           <p className="max-w-xl text-lg text-pretty text-muted-foreground">
-            Eyrie is a post-quantum wallet. Every transaction is signed with Falcon-512 and pays its gas in USDC, so you
+            Qrypt is a post-quantum wallet. Every transaction is signed with Falcon-512 and pays its gas in USDC, so you
             never need ETH. Use it as a browser extension with a fullscreen dashboard, or right here on the web.
           </p>
           <div className="flex flex-wrap gap-3">

@@ -43,14 +43,14 @@ async function handle(origin, method, params) {
   if (method === "wallet_switchEthereumChain") {
     return params?.[0]?.chainId?.toLowerCase() === CHAIN_ID_HEX
       ? { result: null }
-      : { error: { code: 4902, message: "Eyrie only runs on the EIP-8141 devnet (chain 1337)." } }
+      : { error: { code: 4902, message: "Qrypt only runs on the EIP-8141 devnet (chain 1337)." } }
   }
   if (APPROVAL.has(method)) return approve(origin, method, params)
   return read(method, params)
 }
 
 chrome.runtime.onConnect.addListener((port) => {
-  if (port.name !== "eyrie-rpc") return
+  if (port.name !== "qrypt-rpc") return
   const origin = new URL(port.sender.url).origin
   port.onMessage.addListener(async ({ method, params }) => {
     let reply
@@ -70,11 +70,11 @@ chrome.runtime.onConnect.addListener((port) => {
 // Only the extension's own pages can send these (no externally_connectable), so the approval window is trusted.
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id || !sender.url?.startsWith(chrome.runtime.getURL("approve.html"))) return
-  if (msg?.type === "eyrie:get") {
+  if (msg?.type === "qrypt:get") {
     chrome.storage.session.get(`req:${msg.rid}`).then((s) => sendResponse({ request: s[`req:${msg.rid}`] }))
     return true
   }
-  if (msg?.type === "eyrie:respond") {
+  if (msg?.type === "qrypt:respond") {
     const w = waiting.get(msg.rid)
     waiting.delete(msg.rid)
     w?.resolve("error" in msg.response ? { error: msg.response.error } : { result: msg.response.result })

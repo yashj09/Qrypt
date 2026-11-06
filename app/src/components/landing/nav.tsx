@@ -16,7 +16,7 @@ export function Nav() {
   return (
     <header className="sticky top-0 z-10 border-b bg-background/85 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-6">
-        <a href="/" aria-label="Eyrie home">
+        <a href="/" aria-label="Qrypt home">
           <Wordmark />
         </a>
         <nav className="hidden items-center gap-1 md:flex">

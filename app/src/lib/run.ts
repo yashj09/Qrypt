@@ -8,7 +8,7 @@ export type MempoolKey = "canonical" | "stock" | "alt"
 export const MEMPOOLS: { key: MempoolKey; name: string; rule: string }[] = [
   { key: "canonical", name: "Canonical mempool", rule: "EIP-8141 defaults · 100k VERIFY cap" },
   { key: "stock", name: "Hosted alt mempool", rule: "Organisers' ERC-8421 node · limits lifted" },
-  { key: "alt", name: "Eyrie alt mempool", rule: "ERC-8421 BUDGET-010 · 1M gas for staked entities" },
+  { key: "alt", name: "Qrypt alt mempool", rule: "ERC-8421 BUDGET-010 · 1M gas for staked entities" },
 ]
 
 /** What the user asked for: a title for humans, the calls for the chain, and the transfer to watch, if any. */

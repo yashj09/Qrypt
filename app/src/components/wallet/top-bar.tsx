@@ -17,7 +17,7 @@ export function TopBar({ account, inspectorOpen, onToggleInspector, mobileInspec
   return (
     <header className="sticky top-0 z-10 border-b bg-background/85 backdrop-blur">
       <div className="flex h-14 items-center justify-between gap-3 px-4 lg:px-6">
-        <a href="/" aria-label="Eyrie home">
+        <a href="/" aria-label="Qrypt home">
           <Wordmark />
         </a>
         <div className="flex items-center gap-2">

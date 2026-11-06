@@ -67,7 +67,7 @@ export async function createBackup(d: Deployment, account: Address, password: st
 
 export function downloadBackup(backup: KeyBackup) {
   const url = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" }))
-  const a = Object.assign(document.createElement("a"), { href: url, download: `eyrie-key-${backup.account.slice(2, 8)}.json` })
+  const a = Object.assign(document.createElement("a"), { href: url, download: `qrypt-key-${backup.account.slice(2, 8)}.json` })
   a.click()
   URL.revokeObjectURL(url)
 }
@@ -78,9 +78,9 @@ export async function openBackup(d: Deployment, file: File, password: string): P
   try {
     backup = JSON.parse(await file.text())
   } catch {
-    throw new Error("That file isn't an Eyrie key backup.")
+    throw new Error("That file isn't an Qrypt key backup.")
   }
-  if (backup.kind !== "eyrie-key-backup" || backup.v !== 1) throw new Error("That file isn't an Eyrie key backup.")
+  if (backup.kind !== "eyrie-key-backup" || backup.v !== 1) throw new Error("That file isn't an Qrypt key backup.")
   if (backup.chainId !== d.chainId) throw new Error(`This backup is for chain ${backup.chainId}, not ${d.chainId}.`)
   let seed: Hex
   try {

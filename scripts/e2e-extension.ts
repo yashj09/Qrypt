@@ -5,8 +5,8 @@ import { extensionUrl, launchWithExtension } from "./lib/extension-browser.ts";
  * The extension as a wallet, end to end, in a fresh Chromium profile:
  * onboarding opens on install, a password-locked vault holds the Falcon key, it locks and unlocks.
  */
-const PASSWORD = "eyrie-e2e-password";
-const DAPP = process.env.EYRIE_DAPP ?? "http://localhost:5180";
+const PASSWORD = "qrypt-e2e-password";
+const DAPP = process.env.QRYPT_DAPP ?? "http://localhost:5180";
 
 /** Clicks `trigger`, then approves in the window the extension opens. */
 async function approveIn(context: BrowserContext, button: string, trigger: () => Promise<void>) {
@@ -59,7 +59,7 @@ async function main() {
     await popup.goto(extensionUrl(id, "popup.html"));
     await popup.getByText("Assets").waitFor({ timeout: 30_000 });
     await popup.waitForTimeout(3000);
-    if (process.env.EYRIE_SHOTS) await popup.screenshot({ path: `${process.env.EYRIE_SHOTS}/popup.png` });
+    if (process.env.QRYPT_SHOTS) await popup.screenshot({ path: `${process.env.QRYPT_SHOTS}/popup.png` });
     await popup.getByRole("button", { name: "Send", exact: true }).click();
     await popup.locator("#amount").fill("1");
     await popup.getByRole("button", { name: "Review USDC payment" }).click();
@@ -67,16 +67,16 @@ async function main() {
     const included = popup.getByText(/Included in block \d+/);
     await included.waitFor({ timeout: 90_000 });
     step(`popup sent 1 USDC, ${(await included.textContent())?.toLowerCase()}`);
-    if (process.env.EYRIE_SHOTS) await popup.screenshot({ path: `${process.env.EYRIE_SHOTS}/popup-sent.png` });
+    if (process.env.QRYPT_SHOTS) await popup.screenshot({ path: `${process.env.QRYPT_SHOTS}/popup-sent.png` });
 
     const dapp = await context.newPage();
     await dapp.goto(`${DAPP}/dapp`);
-    const eyrie = dapp.locator("[data-slot=item]").filter({ has: dapp.getByText("Eyrie", { exact: true }) });
-    await eyrie.waitFor({ timeout: 15_000 });
-    await approveIn(context, "Connect", () => eyrie.getByRole("button", { name: "Connect" }).click());
-    await dapp.getByText("Connected through Eyrie").waitFor({ timeout: 30_000 });
-    step("dapp found Eyrie through EIP-6963 and connected; approved in the extension's own window");
-    await approveIn(context, "Sign", () => dapp.getByRole("button", { name: "Sign in with Eyrie" }).click());
+    const qrypt = dapp.locator("[data-slot=item]").filter({ has: dapp.getByText("Qrypt", { exact: true }) });
+    await qrypt.waitFor({ timeout: 15_000 });
+    await approveIn(context, "Connect", () => qrypt.getByRole("button", { name: "Connect" }).click());
+    await dapp.getByText("Connected through Qrypt").waitFor({ timeout: 30_000 });
+    step("dapp found Qrypt through EIP-6963 and connected; approved in the extension's own window");
+    await approveIn(context, "Sign", () => dapp.getByRole("button", { name: "Sign in with Qrypt" }).click());
     await dapp.getByText("Signature verified onchain via ERC-1271").waitFor({ timeout: 60_000 });
     step("sign-in signed in the extension, verified onchain via ERC-1271");
     await approveIn(context, "Sign and send", () => dapp.getByRole("button", { name: "Claim 50 tEUR" }).click());
@@ -86,7 +86,7 @@ async function main() {
 
     await worker.evaluate(() => chrome.storage.session.clear());
     const approval = context.waitForEvent("page", { predicate: (p) => p.url().includes("approve.html"), timeout: 30_000 });
-    await dapp.getByRole("button", { name: "Sign in with Eyrie" }).click();
+    await dapp.getByRole("button", { name: "Sign in with Qrypt" }).click();
     const locked = await approval;
     await locked.getByText("Welcome back").waitFor({ timeout: 15_000 });
     await locked.locator("#unlock-password").fill(PASSWORD);
@@ -98,10 +98,10 @@ async function main() {
     await dash.goto(extensionUrl(id, "dashboard.html#portfolio"));
     await dash.getByText("Assets").waitFor({ timeout: 30_000 });
     await dash.waitForTimeout(2500);
-    if (process.env.EYRIE_SHOTS) await dash.screenshot({ path: `${process.env.EYRIE_SHOTS}/dashboard.png` });
+    if (process.env.QRYPT_SHOTS) await dash.screenshot({ path: `${process.env.QRYPT_SHOTS}/dashboard.png` });
     await dash.getByRole("button", { name: "Under the hood" }).click();
     await dash.getByText("One EIP-8141 frame transaction").waitFor();
-    if (process.env.EYRIE_SHOTS) await dash.screenshot({ path: `${process.env.EYRIE_SHOTS}/dashboard-hood.png` });
+    if (process.env.QRYPT_SHOTS) await dash.screenshot({ path: `${process.env.QRYPT_SHOTS}/dashboard-hood.png` });
     step("dashboard: portfolio and under the hood render");
 
     await dash.getByRole("button", { name: "Settings" }).click();
@@ -115,11 +115,11 @@ async function main() {
     await dash.locator("#backup-confirm").fill(PASSWORD);
     const download = dash.waitForEvent("download");
     await dash.getByRole("button", { name: "Download backup" }).click();
-    const backupPath = `${process.env.EYRIE_SHOTS ?? "/tmp"}/eyrie-e2e-backup.json`;
+    const backupPath = `${process.env.QRYPT_SHOTS ?? "/tmp"}/qrypt-e2e-backup.json`;
     await (await download).saveAs(backupPath);
     const account = await dash.locator("aside .font-mono").first().textContent();
     step(`backed up the rotated key (${account})`);
-    if (process.env.EYRIE_SHOTS) await dash.screenshot({ path: `${process.env.EYRIE_SHOTS}/dashboard-settings.png` });
+    if (process.env.QRYPT_SHOTS) await dash.screenshot({ path: `${process.env.QRYPT_SHOTS}/dashboard-settings.png` });
 
     const second = await launchWithExtension();
     try {

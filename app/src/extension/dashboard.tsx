@@ -79,7 +79,7 @@ function Dashboard() {
       <aside className="sticky top-0 flex h-svh w-72 shrink-0 flex-col gap-6 border-r p-5">
         <div className="flex items-center gap-2">
           <LogoMark className="size-7" />
-          <span className="text-lg font-semibold tracking-tight">Eyrie</span>
+          <span className="text-lg font-semibold tracking-tight">Qrypt</span>
           <Badge variant="success" className="ml-1">
             post-quantum
           </Badge>
@@ -133,7 +133,7 @@ function Dashboard() {
             <Empty className="border border-dashed">
               <EmptyHeader>
                 <EmptyTitle>No account yet</EmptyTitle>
-                <EmptyDescription>Finish setting up Eyrie in the onboarding tab.</EmptyDescription>
+                <EmptyDescription>Finish setting up Qrypt in the onboarding tab.</EmptyDescription>
               </EmptyHeader>
             </Empty>
           ) : (
@@ -217,7 +217,7 @@ function SendHint() {
       <CardHeader>
         <CardTitle>One transaction, no ETH</CardTitle>
         <CardDescription>
-          Eyrie signs with Falcon-512 and repays the gas in USDC inside the same frame transaction. Watch it go through the
+          Qrypt signs with Falcon-512 and repays the gas in USDC inside the same frame transaction. Watch it go through the
           mempools under "Under the hood".
         </CardDescription>
       </CardHeader>
@@ -243,7 +243,7 @@ function ConnectedSites() {
     <Empty className="border border-dashed">
       <EmptyHeader>
         <EmptyTitle>No connected sites</EmptyTitle>
-        <EmptyDescription>Dapps you connect to through Eyrie show up here.</EmptyDescription>
+        <EmptyDescription>Dapps you connect to through Qrypt show up here.</EmptyDescription>
       </EmptyHeader>
     </Empty>
   ) : (

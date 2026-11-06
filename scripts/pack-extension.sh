@@ -4,6 +4,6 @@ set -e
 cd "$(dirname "$0")/.."
 pnpm --filter app build:extension >/dev/null
 cd extension/dist
-rm -f ../../app/public/eyrie-extension.zip
-zip -qr ../../app/public/eyrie-extension.zip . -x ".*"
-echo "wrote app/public/eyrie-extension.zip ($(wc -c < ../../app/public/eyrie-extension.zip | tr -d ' ') bytes)"
+rm -f ../../app/public/qrypt-extension.zip
+zip -qr ../../app/public/qrypt-extension.zip . -x ".*"
+echo "wrote app/public/qrypt-extension.zip ($(wc -c < ../../app/public/qrypt-extension.zip | tr -d ' ') bytes)"

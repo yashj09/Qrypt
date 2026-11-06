@@ -100,6 +100,6 @@ Accounts made by the old factory keep working on chain, but the app looks up acc
 ## Extension
 
 - `pnpm --filter app build:extension` builds `extension/dist` (load it unpacked). `pnpm --filter app dev:extension` rebuilds on change; reload the extension in `chrome://extensions` after each build.
-- `pnpm pack:extension` builds and zips `extension/dist` into `app/public/eyrie-extension.zip`, which the landing page serves.
+- `pnpm pack:extension` builds and zips `extension/dist` into `app/public/qrypt-extension.zip`, which the landing page serves.
 - `pnpm test:extension` runs the whole extension flow in Playwright's Chromium (with `pnpm app` running for the demo dapp).
 - The extension reads the alt-mempool URL from `https://qpay-psi.vercel.app/api/config`, which returns the Vercel env `VITE_ALT_RPC`. After a tunnel restart, updating that env and redeploying is enough; the extension doesn't need rebuilding.

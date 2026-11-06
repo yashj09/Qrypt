@@ -1,4 +1,4 @@
-export const BRAND = "Eyrie"
+export const BRAND = "Qrypt"
 
 export const NODE_RPC: string = import.meta.env.VITE_NODE_RPC ?? "https://altmempool.forshtat.com"
 

@@ -2,7 +2,7 @@ import { decodeFunctionData, erc20Abi, hashMessage, hashTypedData, hexToString, 
 import { bytesToHex, defaultGas, hexToBytes, type Call } from "@qpay/frametx"
 import { estimateFee, prepareCalls, signer, toAlt, toStock, type Deployment } from "@/lib/qpay"
 import { short, units } from "@/lib/format"
-import type { EyrieRequest, RpcError } from "@/lib/connect/protocol"
+import type { QryptRequest, RpcError } from "@/lib/connect/protocol"
 
 /** What the user is asked to approve, already parsed and validated. */
 export type Review =
@@ -44,7 +44,7 @@ interface TxParams {
   gas?: string
 }
 
-export function review(d: Deployment, account: Address, req: EyrieRequest): Review {
+export function review(d: Deployment, account: Address, req: QryptRequest): Review {
   switch (req.method) {
     case "eth_requestAccounts":
       return { kind: "connect" }

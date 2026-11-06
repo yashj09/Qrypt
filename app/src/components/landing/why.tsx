@@ -27,9 +27,9 @@ const POINTS: { icon: LucideIcon; today: string; title: string; answer: string }
 export function Why() {
   return (
     <Section id="why">
-      <SectionHeading eyebrow="Why Eyrie" title={<>Stablecoins should <em>feel like money.</em></>}>
+      <SectionHeading eyebrow="Why Qrypt" title={<>Stablecoins should <em>feel like money.</em></>}>
         Sending dollars onchain still means buying a second token for gas and trusting a key that quantum computers are
-        expected to break. Eyrie removes both.
+        expected to break. Qrypt removes both.
       </SectionHeading>
       <div className="grid gap-6 md:grid-cols-3">
         {POINTS.map((p) => (

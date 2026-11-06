@@ -2,7 +2,7 @@
 
 ## Project name
 
-Eyrie
+Qrypt
 
 ## Short description (one line)
 
@@ -27,11 +27,11 @@ The app sends the same signed transaction to three places and shows the live res
 
 The app then shows the per-frame gas from the receipt. A tampered signature is rejected in VERIFY, and so is an underpaid fee. Nothing is charged in either case.
 
-Payments are where it starts; Eyrie is a whole wallet on the same transactions:
+Payments are where it starts; Qrypt is a whole wallet on the same transactions:
 - **Any asset:** send and receive USDC, ETH and any ERC-20, with a QR receive screen and an activity list read from chain logs.
 - **Browser extension:** a full wallet in the toolbar with a fullscreen dashboard, its Falcon key in a password-locked vault (envelope encryption, auto-lock, Touch ID through WebAuthn PRF where supported). Dapps discover it through EIP-6963 and approve in the extension's own window.
 - **No-install path:** dapps can also reach the web wallet through a popup provider. A demo dapp at `/dapp` connects, signs in, and claims test tokens either way.
-- **Sign in with Eyrie:** messages and typed data are signed with Falcon-512, and dapps verify them onchain through the account's ERC-1271.
+- **Sign in with Qrypt:** messages and typed data are signed with Falcon-512, and dapps verify them onchain through the account's ERC-1271.
 - **Key safety:** a password-encrypted backup file that is checked onchain on restore, key rotation signed by the old key, and closing the account (unstake and sweep) in one transaction.
 
 ## How it's made
@@ -57,7 +57,7 @@ Payments are where it starts; Eyrie is a whole wallet on the same transactions:
 
 ## Partner prize: Ethereum Foundation, Best use of the Frame Transaction Alternative Mempool
 
-**How we used it.** Eyrie needs both things the brief names:
+**How we used it.** Qrypt needs both things the brief names:
 - a verification budget well above 100k, for the post-quantum smart wallet;
 - flexible paymaster state access, for the ERC-20 paymaster.
 
@@ -76,7 +76,7 @@ Both are in one transaction. The canonical mempool rejects it. We admit it on th
 
 - Live app: https://qpay-psi.vercel.app
 - Demo dapp: https://qpay-psi.vercel.app/dapp
-- Chrome extension (load unpacked): https://qpay-psi.vercel.app/eyrie-extension.zip
+- Chrome extension (load unpacked): https://qpay-psi.vercel.app/qrypt-extension.zip
 - Repo: https://github.com/yashj09/qpay
 - Sidecar fork (BUDGET-010): https://github.com/yashj09/mempool-workshop-sidecar/tree/budget-010
 - Upstream PR: https://github.com/forshtat/mempool-workshop-sidecar/pull/2

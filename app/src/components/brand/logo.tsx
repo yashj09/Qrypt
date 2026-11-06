@@ -1,24 +1,21 @@
 import { cn } from "@/lib/utils"
 import { BRAND } from "@/lib/site"
 
-const NEST = [
-  [3.5, 8.5],
-  [20.5, 8.5],
-  [4.6, 13],
-  [19.4, 13],
-  [7.4, 16.8],
-  [16.6, 16.8],
-  [12, 18.6],
-] as const
+const RING = Array.from({ length: 12 }, (_, i) => {
+  const a = (i / 12) * Math.PI * 2 - Math.PI / 2
+  return [11 + 7.6 * Math.cos(a), 11 + 7.6 * Math.sin(a)] as const
+})
 
-/** Lattice points forming a nest around one key: Falcon is a lattice signature, and an eyrie is a falcon's nest. */
+/** A "Q" drawn with lattice points: Falcon-512 is a lattice signature, and the tail makes the Q. */
 export function LogoMark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className={className}>
-      <circle cx="12" cy="10.2" r="3.6" />
-      {NEST.map(([cx, cy]) => (
-        <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="1.35" />
+    <svg viewBox="0 0 22 22" fill="currentColor" aria-hidden className={className}>
+      {RING.map(([cx, cy], i) => (
+        <circle key={i} cx={cx} cy={cy} r="1.45" />
       ))}
+      <circle cx="11" cy="11" r="2.6" />
+      <circle cx="16.6" cy="16.6" r="1.6" />
+      <circle cx="19.4" cy="19.4" r="1.8" />
     </svg>
   )
 }

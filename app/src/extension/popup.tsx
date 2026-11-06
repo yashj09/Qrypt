@@ -32,7 +32,7 @@ function Popup() {
       <header className="flex h-12 shrink-0 items-center justify-between border-b px-3">
         <div className="flex items-center gap-2">
           <LogoMark className="size-5" />
-          <span className="text-sm font-semibold">Eyrie</span>
+          <span className="text-sm font-semibold">Qrypt</span>
         </div>
         <div className="flex items-center gap-1">
           <NetworkBadge />
@@ -165,7 +165,7 @@ function SettingsScreen() {
           <LockIcon />
         </ItemMedia>
         <ItemContent>
-          <ItemTitle>Lock Eyrie</ItemTitle>
+          <ItemTitle>Lock Qrypt</ItemTitle>
           <ItemDescription>It also locks itself after 15 idle minutes.</ItemDescription>
         </ItemContent>
         <ItemActions>

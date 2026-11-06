@@ -1,21 +1,21 @@
-# Eyrie
+# Qrypt
 
 **The post-quantum wallet on EIP-8141. Falcon-512 signatures, gas paid in USDC, zero ETH, zero middlemen.**
 
-Eyrie was called Q-Pay while we built it, so the repo, the contracts (`QPayAccount` and the rest) and the `@qpay/*` packages keep that name.
+Qrypt was called Q-Pay, then Eyrie, while we built it, so the repo, the contracts (`QPayAccount` and the rest) and the `@qpay/*` packages keep the first name. Its home is [qrypt.money](https://qrypt.money).
 
-Eyrie is a smart-account wallet whose only key is **Falcon-512**; there is no ECDSA key anywhere. Payments are its first job: a brand-new account that holds only USDC sends a payment. A permissionless paymaster pays the gas and takes it back **in USDC inside the same transaction**. There is no bundler, relayer or paymaster server: the validation rules are code running in VERIFY frames.
+Qrypt is a smart-account wallet whose only key is **Falcon-512**; there is no ECDSA key anywhere. Payments are its first job: a brand-new account that holds only USDC sends a payment. A permissionless paymaster pays the gas and takes it back **in USDC inside the same transaction**. There is no bundler, relayer or paymaster server: the validation rules are code running in VERIFY frames.
 
 | | |
 |---|---|
 | **Canonical mempool** (EIP-8141) | **Rejects** it: the Falcon check costs about 0.7M gas, over the 100k validation cap, and the paymaster reads storage outside `tx.sender` |
 | **Alternative mempool** (ERC-8421) | **Admits** it, under the per-entity validation budget (BUDGET-010) we implemented in the sidecar: the staked account gets up to 1M, and the unstaked paymaster stays under 100k |
 
-Built at ETHGlobal Mumbai 2026 for the Ethereum Foundation "Best use of the Frame Transaction Alternative Mempool" prize. Its brief names PQ-secure smart wallets and ERC-20 paymasters. Eyrie does both in one transaction.
+Built at ETHGlobal Mumbai 2026 for the Ethereum Foundation "Best use of the Frame Transaction Alternative Mempool" prize. Its brief names PQ-secure smart wallets and ERC-20 paymasters. Qrypt does both in one transaction.
 
-![Eyrie app: the wallet on the left, the dark under-the-hood inspector with live mempool verdicts on the right](docs/media/app.png)
+![Qrypt app: the wallet on the left, the dark under-the-hood inspector with live mempool verdicts on the right](docs/media/app.png)
 
-![Eyrie landing page](docs/media/landing.png)
+![Qrypt landing page](docs/media/landing.png)
 
 ## Proof it runs on the public devnet
 
@@ -55,16 +55,16 @@ The devnet can be reset at any time. If it has been, `pnpm setup` and `pnpm send
 | Gas in USDC | Every transaction is `[Falcon VERIFY, paymaster VERIFY, repay USDC, ...your calls]`. The paymaster only checks the frame after it, so the calls can be anything |
 | Browser extension | A full wallet in the toolbar (Talisman-style): balance, assets, send, receive, activity, and a **Fullscreen** dashboard tab with under the hood, connected sites and settings. The Falcon key lives in an encrypted vault: password unlock, auto-lock after 15 idle minutes, Touch ID where the browser supports WebAuthn PRF. Dapps find it through EIP-6963 and approve in the extension's own window |
 | Connect without installing | An EIP-1193 provider opens the web wallet's `/connect` page in a popup. Try both ways at [/dapp](https://qpay-psi.vercel.app/dapp) |
-| Sign in with Eyrie | `personal_sign` and `eth_signTypedData_v4` return a Falcon signature over the EIP-191/712 hash; the account's `isValidSignature` (ERC-1271) checks it onchain |
+| Sign in with Qrypt | `personal_sign` and `eth_signTypedData_v4` return a Falcon signature over the EIP-191/712 hash; the account's `isValidSignature` (ERC-1271) checks it onchain |
 | Back up and restore | A password-encrypted file (PBKDF2-SHA-256, 600k rounds, AES-GCM), made and read in the browser. Restore checks onchain that the key still controls the account |
 | Rotate the key | A transaction signed by the current key calls `rotateKey`, which only the account itself can call. The old key and old backups stop working |
 | Close the account | One transaction unlocks and withdraws the stake and sweeps every balance to an address you choose |
 
-**Install the extension:** download [eyrie-extension.zip](https://qpay-psi.vercel.app/eyrie-extension.zip), unzip it, open `chrome://extensions`, turn on Developer mode and choose "Load unpacked". (From a clone: `pnpm --filter app build:extension`, then load `extension/dist`.) Onboarding opens by itself: create a wallet or import a backup file from the web wallet. It isn't in the Chrome Web Store.
+**Install the extension:** download [qrypt-extension.zip](https://qpay-psi.vercel.app/qrypt-extension.zip), unzip it, open `chrome://extensions`, turn on Developer mode and choose "Load unpacked". (From a clone: `pnpm --filter app build:extension`, then load `extension/dist`.) Onboarding opens by itself: create a wallet or import a backup file from the web wallet. It isn't in the Chrome Web Store.
 
 ## Live demo for judges
 
-**https://qpay-psi.vercel.app** is the landing page. **https://qpay-psi.vercel.app/app** creates your own post-quantum account in your browser and sends USDC with 0 ETH. **https://qpay-psi.vercel.app/dapp** is a demo third-party dapp: connect, sign in (verified onchain by ERC-1271) and claim test euros through Eyrie. The Falcon key never leaves your device. Our BUDGET-010 sidecar runs on the presenter's laptop behind a tunnel. If it's offline, the organisers' hosted alt mempool still carries the transaction.
+**https://qpay-psi.vercel.app** is the landing page. **https://qpay-psi.vercel.app/app** creates your own post-quantum account in your browser and sends USDC with 0 ETH. **https://qpay-psi.vercel.app/dapp** is a demo third-party dapp: connect, sign in (verified onchain by ERC-1271) and claim test euros through Qrypt. The Falcon key never leaves your device. Our BUDGET-010 sidecar runs on the presenter's laptop behind a tunnel. If it's offline, the organisers' hosted alt mempool still carries the transaction.
 
 **Is a 700k-gas VERIFY frame fair to mempool nodes and builders?** Yes, with measured numbers, and without breaking CROPS: see [docs/mempool-safety.md](docs/mempool-safety.md).
 

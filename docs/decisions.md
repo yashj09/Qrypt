@@ -65,3 +65,9 @@ Each entry gives the date, the decision, and why. Newest last.
 **One codebase, two builds.** Signing goes through a `KeyStore` interface and all wallet state lives in `useWallet()`, so the website, popup and dashboard share every feature. The extension pages are a second Vite build of the same `src`.
 
 **Approvals inside the extension.** The background worker opens `approve.html`, which unlocks first if needed and reuses the website's review/execute code. `externally_connectable` is gone: nothing outside the extension can talk to it except through the page provider.
+
+## 7 Nov: renamed to Qrypt, on qrypt.money
+
+The product is now **Qrypt**, at `qrypt.money`. Known conflict, accepted: **Qrypt Inc.** (New York, 2017) sells quantum-resistant encryption and owns qrypt.com, the same category as us. That's a trademark and search risk for a real product; it was accepted for now. Storage keys (`eyrie.vault`, `qpay.*`) and the backup format id stay unchanged, so existing wallets and backup files keep working. The mark is a "Q" drawn with lattice points.
+
+**Mobile direction: an installable web wallet first, not a native app.** The Secure Enclave can't sign Falcon, so a native app only wraps the key in hardware. Most of that protection is available on the web through passkey PRF (Face ID), and judges can use it today without TestFlight. A Capacitor iOS shell stays on the roadmap for App Store distribution, native push and Secure Enclave–wrapped keys.

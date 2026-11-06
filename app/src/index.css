@@ -129,7 +129,7 @@
     --sidebar-ring: oklch(0.556 0 0);
 }
 
-/* The balance card in the extension: forest green into indigo, Eyrie's take on a wallet hero card. */
+/* The balance card in the extension: forest green into indigo, Qrypt's take on a wallet hero card. */
 @utility bg-aurora {
     background-color: oklch(0.21 0.02 230);
     background-image:

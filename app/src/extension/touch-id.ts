@@ -16,7 +16,7 @@ const fromB64url = (s: string) => Uint8Array.from(atob(s.replace(/-/g, "+").repl
 async function kekFromPrf(secret: ArrayBuffer): Promise<CryptoKey> {
   const base = await crypto.subtle.importKey("raw", secret, "HKDF", false, ["deriveKey"])
   return crypto.subtle.deriveKey(
-    { name: "HKDF", hash: "SHA-256", salt: new Uint8Array(32), info: new TextEncoder().encode("eyrie vault key, touch id") },
+    { name: "HKDF", hash: "SHA-256", salt: new Uint8Array(32), info: new TextEncoder().encode("qrypt vault key, touch id") },
     base,
     { name: "AES-GCM", length: 256 },
     false,
@@ -50,8 +50,8 @@ export async function enableTouchId(): Promise<EnableResult> {
   const salt = random(32)
   const credential = (await navigator.credentials.create({
     publicKey: {
-      rp: { name: "Eyrie" },
-      user: { id: random(16), name: "eyrie-wallet", displayName: "Eyrie wallet" },
+      rp: { name: "Qrypt" },
+      user: { id: random(16), name: "qrypt-wallet", displayName: "Qrypt wallet" },
       challenge: random(32),
       pubKeyCredParams: [
         { type: "public-key", alg: -7 },
