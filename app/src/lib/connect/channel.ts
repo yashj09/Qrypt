@@ -7,15 +7,8 @@ export interface Channel {
   respond(response: EyrieResponse): void
 }
 
-interface ChromeRuntime {
-  sendMessage(extensionId: string, message: unknown, callback?: (reply: unknown) => void): void
-  lastError?: { message?: string }
-}
-
-const chromeRuntime = () => (globalThis as { chrome?: { runtime?: ChromeRuntime } }).chrome?.runtime
-
 /** The dapp opened us with window.open; the browser tells us its real origin with each message. */
-function popupChannel(): Channel | null {
+export function popupChannel(): Channel | null {
   const opener = window.opener as Window | null
   if (!opener) return null
   let origin = ""
@@ -40,30 +33,17 @@ function popupChannel(): Channel | null {
   }
 }
 
-/** The Eyrie extension opened us; it holds the request and set its origin from the requesting tab's URL. */
-function extensionChannel(extensionId: string, rid: string): Channel | null {
-  const runtime = chromeRuntime()
-  if (!runtime) return null
-  const request = new Promise<EyrieRequest>((resolve, reject) =>
-    runtime.sendMessage(extensionId, { type: "eyrie:get", rid }, (reply) => {
-      const r = reply as { request?: EyrieRequest } | undefined
-      if (r?.request) resolve(r.request)
-      else reject(new Error(runtime.lastError?.message ?? "The extension has no pending request."))
-    }),
-  )
+/** The extension's own approval window: the background worker holds the request and set its origin from the tab. */
+export function extensionChannel(rid: string): Channel {
+  const request = chrome.runtime.sendMessage({ type: "eyrie:get", rid }).then((reply: { request?: EyrieRequest } | undefined) => {
+    if (!reply?.request) throw new Error("This request has expired. Try again from the dapp.")
+    return reply.request
+  })
   return {
     kind: "extension",
     request,
-    respond: (response) => runtime.sendMessage(extensionId, { type: "eyrie:respond", rid, response }),
+    respond: (response) => void chrome.runtime.sendMessage({ type: "eyrie:respond", rid, response }),
   }
 }
 
-export function channelFromLocation(): Channel | null {
-  const q = new URLSearchParams(window.location.search)
-  if (q.get("transport") === "extension") {
-    const ext = q.get("ext")
-    const rid = q.get("rid")
-    return ext && rid ? extensionChannel(ext, rid) : null
-  }
-  return popupChannel()
-}
+export const channelFromLocation = (): Channel | null => popupChannel()

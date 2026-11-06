@@ -1,16 +1,13 @@
-// Answers reads from the node, and sends approvals to the Eyrie web wallet's /connect page in a popup window.
-// The page talks back through externally_connectable, so keys never leave the wallet's own origin.
-const WALLET = "https://qpay-psi.vercel.app"
-const LOCAL_WALLET = "http://localhost:5180"
+// The wallet's background worker. Reads go to the node; approvals open the extension's own approval window, which
+// holds the Falcon key (through the vault) and answers over internal messages.
 const RPC = "https://altmempool.forshtat.com"
 const CHAIN_ID_HEX = "0x539"
 const APPROVAL = new Set(["eth_requestAccounts", "eth_sendTransaction", "personal_sign", "eth_signTypedData_v4"])
 const REJECTED = { code: 4001, message: "User rejected the request." }
 
-/** rid -> { resolve, windowId }. The request itself lives in session storage, so /connect can fetch it by rid. */
+/** rid -> { resolve, windowId }. The request lives in session storage, so the approval window can fetch it by rid. */
 const waiting = new Map()
 
-const walletUrl = async () => ((await chrome.storage.local.get("useLocal")).useLocal ? LOCAL_WALLET : WALLET)
 const connectedSites = async () => (await chrome.storage.local.get("connected")).connected ?? {}
 
 async function read(method, params) {
@@ -26,8 +23,8 @@ async function read(method, params) {
 async function approve(origin, method, params) {
   const rid = crypto.randomUUID()
   await chrome.storage.session.set({ [`req:${rid}`]: { id: rid, origin, method, params } })
-  const url = `${await walletUrl()}/connect?transport=extension&ext=${chrome.runtime.id}&rid=${rid}`
-  const win = await chrome.windows.create({ url, type: "popup", width: 440, height: 720 })
+  const url = chrome.runtime.getURL(`approve.html?rid=${rid}`)
+  const win = await chrome.windows.create({ url, type: "popup", width: 420, height: 680 })
   const reply = await new Promise((resolve) => waiting.set(rid, { resolve, windowId: win.id }))
   await chrome.storage.session.remove(`req:${rid}`)
   if (method === "eth_requestAccounts" && reply.result?.[0]) {
@@ -70,7 +67,9 @@ chrome.runtime.onConnect.addListener((port) => {
   })
 })
 
-chrome.runtime.onMessageExternal.addListener((msg, _sender, sendResponse) => {
+// Only the extension's own pages can send these (no externally_connectable), so the approval window is trusted.
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (sender.id !== chrome.runtime.id || !sender.url?.startsWith(chrome.runtime.getURL("approve.html"))) return
   if (msg?.type === "eyrie:get") {
     chrome.storage.session.get(`req:${msg.rid}`).then((s) => sendResponse({ request: s[`req:${msg.rid}`] }))
     return true

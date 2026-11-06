@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { execute, review, type Review } from "@/lib/connect/approve"
-import { channelFromLocation } from "@/lib/connect/channel"
+import { channelFromLocation, type Channel } from "@/lib/connect/channel"
 import { USER_REJECTED, type EyrieRequest, type RpcError } from "@/lib/connect/protocol"
 import { loadDeployment, storedAccount, type Deployment } from "@/lib/qpay"
 import { short, usdcAmount } from "@/lib/format"
@@ -36,8 +36,9 @@ const TITLES: Record<Review["kind"], { title: string; action: string }> = {
 const asRpcError = (e: unknown): RpcError =>
   typeof e === "object" && e && "code" in e && "message" in e ? (e as RpcError) : { code: -32603, message: String((e as Error)?.message ?? e) }
 
-export default function ConnectPage() {
-  const channel = useMemo(() => channelFromLocation(), [])
+/** The approval screen. The website opens it as a popup; the extension renders it in its own window. */
+export default function ConnectPage({ channel: given }: { channel?: Channel | null }) {
+  const channel = useMemo(() => (given === undefined ? channelFromLocation() : given), [given])
   const [state, setState] = useState<State>(channel ? { kind: "loading" } : { kind: "no-channel" })
   const [deployment, setDeployment] = useState<Deployment | null>(null)
   const [account, setAccount] = useState<Address | null>(null)

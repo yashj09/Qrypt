@@ -37,12 +37,6 @@
       "run_at": "document_start"
     }
   ],
-  "externally_connectable": {
-    "matches": [
-      "https://qpay-psi.vercel.app/*",
-      "http://localhost:5180/*"
-    ]
-  },
   "permissions": [
     "storage",
     "alarms"
@@ -51,7 +45,6 @@
     "https://altmempool.forshtat.com/*",
     "https://altmempoolgateway.forshtat.com/*",
     "https://*.trycloudflare.com/*",
-    "https://qpay-psi.vercel.app/*",
-    "http://localhost:5180/*"
+    "https://qpay-psi.vercel.app/*"
   ]
 }

@@ -6,6 +6,15 @@ import { extensionUrl, launchWithExtension } from "./lib/extension-browser.ts";
  * onboarding opens on install, a password-locked vault holds the Falcon key, it locks and unlocks.
  */
 const PASSWORD = "eyrie-e2e-password";
+const DAPP = process.env.EYRIE_DAPP ?? "http://localhost:5180";
+
+/** Clicks `trigger`, then approves in the window the extension opens. */
+async function approveIn(context: BrowserContext, button: string, trigger: () => Promise<void>) {
+  const opened = context.waitForEvent("page", { predicate: (p) => p.url().includes("approve.html"), timeout: 30_000 });
+  await trigger();
+  const win = await opened;
+  await win.getByRole("button", { name: button, exact: true }).click({ timeout: 30_000 });
+}
 const step = (msg: string) => console.log(`- ${msg}`);
 
 export async function onboard(context: BrowserContext): Promise<Page> {
@@ -59,6 +68,32 @@ async function main() {
     await included.waitFor({ timeout: 90_000 });
     step(`popup sent 1 USDC, ${(await included.textContent())?.toLowerCase()}`);
     if (process.env.EYRIE_SHOTS) await popup.screenshot({ path: `${process.env.EYRIE_SHOTS}/popup-sent.png` });
+
+    const dapp = await context.newPage();
+    await dapp.goto(`${DAPP}/dapp`);
+    const eyrie = dapp.locator("[data-slot=item]").filter({ has: dapp.getByText("Eyrie", { exact: true }) });
+    await eyrie.waitFor({ timeout: 15_000 });
+    await approveIn(context, "Connect", () => eyrie.getByRole("button", { name: "Connect" }).click());
+    await dapp.getByText("Connected through Eyrie").waitFor({ timeout: 30_000 });
+    step("dapp found Eyrie through EIP-6963 and connected; approved in the extension's own window");
+    await approveIn(context, "Sign", () => dapp.getByRole("button", { name: "Sign in with Eyrie" }).click());
+    await dapp.getByText("Signature verified onchain via ERC-1271").waitFor({ timeout: 60_000 });
+    step("sign-in signed in the extension, verified onchain via ERC-1271");
+    await approveIn(context, "Sign and send", () => dapp.getByRole("button", { name: "Claim 50 tEUR" }).click());
+    const claimed = dapp.getByText(/included in block \d+/);
+    await claimed.waitFor({ timeout: 120_000 });
+    step(`dapp claim ${await claimed.textContent()}`);
+
+    await worker.evaluate(() => chrome.storage.session.clear());
+    const approval = context.waitForEvent("page", { predicate: (p) => p.url().includes("approve.html"), timeout: 30_000 });
+    await dapp.getByRole("button", { name: "Sign in with Eyrie" }).click();
+    const locked = await approval;
+    await locked.getByText("Welcome back").waitFor({ timeout: 15_000 });
+    await locked.locator("#unlock-password").fill(PASSWORD);
+    await locked.getByRole("button", { name: "Unlock" }).click();
+    await locked.getByRole("button", { name: "Sign", exact: true }).click({ timeout: 30_000 });
+    await dapp.getByText("Signature verified onchain via ERC-1271").waitFor({ timeout: 60_000 });
+    step("a request while locked asks for the password first, then signs");
 
     await dash.goto(extensionUrl(id, "dashboard.html#portfolio"));
     await dash.getByText("Assets").waitFor({ timeout: 30_000 });
@@ -119,6 +154,12 @@ async function main() {
     if (!sealed.includes('"ct"') || /"seed":"0x[0-9a-f]{64}"/.test(sealed)) throw new Error("vault isn't sealed");
     step("the seed is stored only as AES-GCM ciphertext");
     console.log("PASS");
+  } catch (err) {
+    for (const p of context.pages()) {
+      const text = await p.locator("body").innerText().catch(() => "");
+      console.error(`--- ${p.url()}\n${text.replace(/\n+/g, " | ").slice(-700)}`);
+    }
+    throw err;
   } finally {
     await context.close();
   }
