@@ -13,25 +13,30 @@ import {
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
+import { ProtectionChoice, type Protection } from "@/components/vault/protection-choice"
 
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onRestore: (file: File, password: string) => Promise<void>
+  /** This device has no vault yet, so restoring also asks how to protect the key (Face ID or a password). */
+  needsVault: boolean
+  onRestore: (file: File, password: string, protection?: Protection) => Promise<void>
 }
 
-export function RestoreDialog({ open, onOpenChange, onRestore }: Props) {
+export function RestoreDialog({ open, onOpenChange, needsVault, onRestore }: Props) {
+  const [protecting, setProtecting] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [password, setPassword] = useState("")
   const [working, setWorking] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const restore = async () => {
+  const restore = async (protection?: Protection) => {
     if (!file) return
     setWorking(true)
     setError(null)
     try {
-      await onRestore(file, password)
+      await onRestore(file, password, protection)
+      setProtecting(false)
       onOpenChange(false)
     } catch (e) {
       setError((e as Error).message)
@@ -58,11 +63,17 @@ export function RestoreDialog({ open, onOpenChange, onRestore }: Props) {
             {error ? <FieldError>{error}</FieldError> : <FieldDescription>The one you chose when you made the backup.</FieldDescription>}
           </Field>
         </FieldGroup>
+        {protecting && (
+          <div className="flex flex-col gap-2">
+            <p className="text-sm text-muted-foreground">How should this device unlock the restored key?</p>
+            <ProtectionChoice action="Restore" onChosen={(p) => restore(p)} />
+          </div>
+        )}
         <DialogFooter>
           <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
-          <Button disabled={!file || !password || working} onClick={restore}>
+          <Button disabled={!file || !password || working} onClick={() => (needsVault ? setProtecting(true) : void restore())}>
             {working ? <Spinner data-icon="inline-start" /> : <UploadIcon data-icon="inline-start" />}
-            Restore
+            {needsVault ? "Continue" : "Restore"}
           </Button>
         </DialogFooter>
       </DialogContent>

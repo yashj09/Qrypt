@@ -11,7 +11,8 @@
     "deploy:account": "tsx scripts/upgrade.ts",
     "pack:extension": "sh scripts/pack-extension.sh",
     "test:extension": "tsx scripts/e2e-extension.ts",
-    "test:web": "tsx scripts/e2e-web.ts"
+    "test:web": "tsx scripts/e2e-web.ts",
+    "test:passkey": "tsx scripts/e2e-passkey.ts"
   },
   "dependencies": {
     "@forshtat/hegota-support": "0.0.1",

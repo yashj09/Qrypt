@@ -9,7 +9,9 @@ async function main() {
   try {
     const page = await browser.newPage();
     await page.goto(`${WALLET}/app`);
-    await page.getByRole("button", { name: "Create my account" }).click({ timeout: 30_000 });
+    await page.locator("#vault-password").fill("web-e2e-password", { timeout: 30_000 });
+    await page.locator("#vault-confirm").fill("web-e2e-password");
+    await page.getByRole("button", { name: "Create with a password" }).click();
     await page.getByText("Add token").waitFor({ timeout: 90_000 });
     step("account created");
     await page.locator("#amount").fill("1");

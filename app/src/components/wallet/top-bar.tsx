@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react"
-import { CheckIcon, CopyIcon, PanelRightCloseIcon, PanelRightOpenIcon } from "lucide-react"
+import { CheckIcon, CopyIcon, LockIcon, PanelRightCloseIcon, PanelRightOpenIcon } from "lucide-react"
 import type { Address } from "viem"
 import { Wordmark } from "@/components/brand/logo"
 import { Button } from "@/components/ui/button"
@@ -8,12 +8,13 @@ import { short } from "@/lib/format"
 
 interface Props {
   account: Address | null
+  onLock?: () => void
   inspectorOpen: boolean
   onToggleInspector: () => void
   mobileInspector: ReactNode
 }
 
-export function TopBar({ account, inspectorOpen, onToggleInspector, mobileInspector }: Props) {
+export function TopBar({ account, onLock, inspectorOpen, onToggleInspector, mobileInspector }: Props) {
   return (
     <header className="sticky top-0 z-10 border-b bg-background/85 backdrop-blur">
       <div className="flex h-14 items-center justify-between gap-3 px-4 lg:px-6">
@@ -23,6 +24,11 @@ export function TopBar({ account, inspectorOpen, onToggleInspector, mobileInspec
         <div className="flex items-center gap-2">
           <NetworkBadge />
           {account && <AccountChip account={account} />}
+          {account && onLock && (
+            <Button variant="ghost" size="icon-sm" aria-label="Lock" onClick={onLock}>
+              <LockIcon />
+            </Button>
+          )}
           <Button variant="ghost" size="sm" className="hidden lg:inline-flex" onClick={onToggleInspector}>
             {inspectorOpen ? <PanelRightCloseIcon data-icon="inline-start" /> : <PanelRightOpenIcon data-icon="inline-start" />}
             Under the hood

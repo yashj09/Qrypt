@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Item, ItemContent, ItemDescription, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item"
 import { Spinner } from "@/components/ui/spinner"
 import type { OnboardStage } from "@/lib/qpay"
+import { ProtectionChoice, type Protection } from "@/components/vault/protection-choice"
 
 const STAGES: { key: OnboardStage; title: string; detail: string }[] = [
   {
@@ -26,11 +27,13 @@ const STAGES: { key: OnboardStage; title: string; detail: string }[] = [
 interface Props {
   stage: OnboardStage | null
   disabled: boolean
-  onCreate: () => void
+  /** This device has no vault yet, so creating asks how to protect the key first (Face ID or a password). */
+  needsVault: boolean
+  onCreate: (protection?: Protection) => Promise<void>
   onRestore: () => void
 }
 
-export function OnboardCard({ stage, disabled, onCreate, onRestore }: Props) {
+export function OnboardCard({ stage, disabled, needsVault, onCreate, onRestore }: Props) {
   const busy = stage !== null
   const current = stage ? STAGES.findIndex((s) => s.key === stage) : -1
   return (
@@ -58,15 +61,19 @@ export function OnboardCard({ stage, disabled, onCreate, onRestore }: Props) {
         </ItemGroup>
       </CardContent>
       <CardFooter className="flex flex-col items-stretch gap-3">
-        <Button size="lg" disabled={disabled || busy} onClick={onCreate}>
-          {busy ? <Spinner data-icon="inline-start" /> : <KeyRoundIcon data-icon="inline-start" />}
-          {busy ? STAGES[current]?.title ?? "Working" : "Create my account"}
-        </Button>
+        {needsVault && !busy ? (
+          <ProtectionChoice action="Create" disabled={disabled} onChosen={(p) => onCreate(p)} />
+        ) : (
+          <Button size="lg" disabled={disabled || busy} onClick={() => void onCreate()}>
+            {busy ? <Spinner data-icon="inline-start" /> : <KeyRoundIcon data-icon="inline-start" />}
+            {busy ? STAGES[current]?.title ?? "Working" : "Create my account"}
+          </Button>
+        )}
         <Button variant="ghost" disabled={busy} onClick={onRestore}>
           I have a backup file
         </Button>
         <p className="text-center text-xs text-muted-foreground">
-          Devnet only. The key lives in this browser's storage, so clearing site data loses the account.
+          Devnet only. Your key is encrypted on this device; back it up from Settings once you're in.
         </p>
       </CardFooter>
     </Card>

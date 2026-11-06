@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react"
+import { useEffect, useState } from "react"
 import {
   ActivityIcon,
   AlertCircleIcon,
@@ -18,12 +18,9 @@ import { Inspector } from "@/components/inspector/inspector"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "@/components/ui/item"
-import { Spinner } from "@/components/ui/spinner"
 import { Activity } from "@/components/wallet/activity"
 import { AddTokenDialog } from "@/components/wallet/add-token-dialog"
 import { KeyCard } from "@/components/wallet/key-card"
@@ -36,9 +33,10 @@ import { short, units } from "@/lib/format"
 import { AssetList } from "./components/asset-list"
 import { BalanceHero } from "./components/balance-hero"
 import { VaultGate } from "./components/vault-gate"
-import { TouchIdCard } from "./components/touch-id-card"
 import { mount } from "./mount"
-import { changePassword, lock } from "./vault"
+import { lock } from "./vault"
+import { UnlockMethodsCard } from "@/components/vault/unlock-methods-card"
+import { extensionVault } from "@/lib/vault/chrome"
 
 const SECTIONS = [
   { id: "portfolio", label: "Portfolio", icon: WalletIcon },
@@ -202,10 +200,7 @@ function Section({ id, w, usdc, go, onReceive, onAddToken }: SectionProps) {
       return (
         <div className="grid gap-6 lg:grid-cols-2">
           <KeyCard busy={busy !== null} onBackup={actions.backup} onRotate={actions.rotate} onClose={actions.close} onForget={actions.forget} />
-          <div className="flex flex-col gap-6">
-            <ChangePasswordCard />
-            <TouchIdCard />
-          </div>
+          <UnlockMethodsCard vault={extensionVault} />
         </div>
       )
   }
@@ -262,56 +257,6 @@ function ConnectedSites() {
         </Item>
       ))}
     </ItemGroup>
-  )
-}
-
-function ChangePasswordCard(): ReactNode {
-  const [current, setCurrent] = useState("")
-  const [next, setNext] = useState("")
-  const [working, setWorking] = useState(false)
-  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null)
-  const ready = current.length > 0 && next.length >= 10 && !working
-  const submit = async () => {
-    setWorking(true)
-    setResult(null)
-    try {
-      await changePassword(current, next)
-      setCurrent("")
-      setNext("")
-      setResult({ ok: true, message: "Password changed." })
-    } catch (e) {
-      setResult({ ok: false, message: (e as Error).message })
-    } finally {
-      setWorking(false)
-    }
-  }
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Password</CardTitle>
-        <CardDescription>Re-encrypts the key's wrapper; the Falcon key itself doesn't change.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <FieldGroup>
-          <Field data-invalid={(result && !result.ok) || undefined}>
-            <FieldLabel htmlFor="current-password">Current password</FieldLabel>
-            <Input id="current-password" type="password" value={current} onChange={(e) => setCurrent(e.target.value)} />
-            {result && !result.ok && <FieldError>{result.message}</FieldError>}
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="next-password">New password (10+ characters)</FieldLabel>
-            <Input id="next-password" type="password" value={next} onChange={(e) => setNext(e.target.value)} />
-          </Field>
-        </FieldGroup>
-      </CardContent>
-      <CardFooter className="justify-between gap-3">
-        <span className="text-sm text-muted-foreground">{result?.ok ? result.message : ""}</span>
-        <Button disabled={!ready} onClick={submit}>
-          {working && <Spinner data-icon="inline-start" />}
-          Change password
-        </Button>
-      </CardFooter>
-    </Card>
   )
 }
 

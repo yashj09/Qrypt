@@ -15,15 +15,47 @@ import { SendCard } from "@/components/wallet/send-card"
 import { TopBar } from "@/components/wallet/top-bar"
 import { TransferStatus } from "@/components/wallet/transfer-status"
 import { useWallet } from "@/hooks/use-wallet"
+import { useVaultState } from "@/components/vault/use-vault"
+import { WebVaultGate } from "@/components/vault/web-vault-gate"
+import { UnlockMethodsCard } from "@/components/vault/unlock-methods-card"
+import type { Protection } from "@/components/vault/protection-choice"
+import { openBackup } from "@/lib/keys"
+import { storeAccount } from "@/lib/qpay"
+import { webVault } from "@/lib/vault/web"
 import { cn } from "@/lib/utils"
 
 export default function AppPage() {
+  return (
+    <WebVaultGate>
+      <WalletPage />
+    </WebVaultGate>
+  )
+}
+
+function WalletPage() {
   const w = useWallet()
   const { deployment, account, wallet, assets, fee, names, notice, error, stage, busy, run, activity, tab, setTab, actions } = w
   const [receiveOpen, setReceiveOpen] = useState(false)
   const [addTokenOpen, setAddTokenOpen] = useState(false)
   const [restoreOpen, setRestoreOpen] = useState(false)
   const [inspectorOpen, setInspectorOpen] = useState(true)
+  const vaultState = useVaultState(webVault)
+  const needsVault = vaultState === "none"
+
+  const create = async (protection?: Protection) => {
+    if (!deployment) throw new Error("Still connecting to the network. Try again in a moment.")
+    if (protection) await webVault.create(protection)
+    await actions.create()
+  }
+
+  const restore = async (file: File, password: string, protection?: Protection) => {
+    if (!deployment) return
+    const { account: restored, seed } = await openBackup(deployment, file, password)
+    if (protection) await webVault.create(protection)
+    await webVault.keyStore.save(seed)
+    storeAccount(deployment, restored)
+    actions.reload()
+  }
 
   const inspector = (
     <Inspector
@@ -41,6 +73,7 @@ export default function AppPage() {
       <TopBar
         account={account}
         inspectorOpen={inspectorOpen}
+        onLock={() => void webVault.lock()}
         onToggleInspector={() => setInspectorOpen((o) => !o)}
         mobileInspector={
           <Sheet>
@@ -91,6 +124,7 @@ export default function AppPage() {
                 />
                 {run && <TransferStatus run={run} />}
                 <Activity local={activity} transfers={wallet?.transfers ?? null} names={names} />
+                <UnlockMethodsCard vault={webVault} />
                 <KeyCard
                   busy={busy !== null}
                   onBackup={actions.backup}
@@ -117,8 +151,8 @@ export default function AppPage() {
               </>
             ) : (
               <>
-                <OnboardCard stage={stage} disabled={!deployment} onCreate={actions.create} onRestore={() => setRestoreOpen(true)} />
-                <RestoreDialog open={restoreOpen} onOpenChange={setRestoreOpen} onRestore={actions.restore} />
+                <OnboardCard stage={stage} disabled={!deployment} needsVault={needsVault} onCreate={create} onRestore={() => setRestoreOpen(true)} />
+                <RestoreDialog open={restoreOpen} onOpenChange={setRestoreOpen} needsVault={needsVault} onRestore={restore} />
               </>
             )}
           </div>
