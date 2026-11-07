@@ -2,7 +2,7 @@
 
 **Setup before going on stage:**
 - The sidecar and tunnel are running detached (see `docs/runbook.md`). The app is live at https://qrypt.money.
-- Browser tab 1: https://qrypt.money (the landing page). Click **Open app** once beforehand so an account exists, then go back.
+- Browser tab 1: https://qrypt.money (the landing page). Click **Open app** once beforehand so an account exists, then go back. Creating it asks for World ID: open "Use the simulator" from the QR screen and press Continue (World ID 4.0).
 - Browser tab 2: the explorer, open on the last transaction (link in the README).
 - Run `pnpm send` once to warm up. Check the account shows USDC and 0 ETH.
 - In the app, open **Under the hood** and press **Keep open beside wallet**, so the inspector stays beside Send (it's remembered).
@@ -44,7 +44,11 @@ Open the **Stress tests** tab in the inspector.
 
 ## 3:00 to 3:30. It's a whole wallet
 
-Click the Qrypt icon in the toolbar: the same wallet as a popup. Hit **Fullscreen** for the dashboard tab, then open https://qrypt.money/dapp in a new tab.
+First, **Swap** in the sidebar: 10 USDC to tEUR. The review shows the minimum received, price impact, the fee in USDC and "Uniswap v4 · USDC → tEUR". Press **Swap**: one Falcon-signed transaction with approve, a one-block Permit2 allowance and the Universal Router swap as an atomic batch, and 0 ETH.
+
+> "Uniswap v4, deployed on this devnet. A post-quantum account swaps with zero ETH, and if the price moves past my minimum, the whole batch undoes itself."
+
+Then click the Qrypt icon in the toolbar: the same wallet as a popup. Hit **Fullscreen** for the dashboard tab, then open https://qrypt.money/dapp in a new tab.
 
 1. The dapp lists **Qrypt** (found through EIP-6963). Click **Connect**; approve in the Qrypt window that pops up.
 2. **Sign in with Qrypt.** "Signature verified onchain via ERC-1271": a Falcon signature, checked by the account itself.

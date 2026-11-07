@@ -27,6 +27,9 @@
   - Chrome extension: `pnpm test:extension` passes, with the claim in block 6582.
 - [x] The extension is the wallet (Talisman-style): popup wallet, fullscreen dashboard, onboarding tab, password-locked vault with auto-lock, Touch ID through WebAuthn PRF where supported, dapp approvals in the extension's own window. `pnpm test:extension` passes end to end: popup send, dapp connect, ERC-1271 sign-in and tEUR claim, locked-request unlock, rotation, backup, then import and send in a fresh browser.
 - [x] Qrypt on phones: the web wallet's vault (Face ID through passkey PRF, or a password), Face ID recovery through our private Blob store, the phone layout with scan to pay and pay links, an installable PWA, and payment push notifications from a laptop watcher. `pnpm test:passkey`, `test:mobile` and `test:push` pass (push through the real push service).
+- [x] Swap on Uniswap v4: deployed on the devnet from the npm artifacts, USDC/tEUR and ETH/USDC pools, two-hop tEUR↔ETH, approve + Permit2 + Universal Router as one EIP-8141 atomic batch (proven with `check:atomic`). `pnpm test:swap` passes; CLI swaps for every route in blocks 10251–10326.
+- [x] World ID gates sponsored onboarding: Proof of Human bound to the key, verified with World's v4 endpoint, nullifier claimed once. `pnpm test:world` passes against World's staging network with the Simulator (success, the same human refused, cancel).
+- [ ] Uniswap Developer Feedback Form (you), linking `FEEDBACK.md`.
 - [ ] Touch ID checked by hand on your Mac (Chrome and Dia).
 - [ ] On your iPhone, at qrypt.money: install to the home screen, create with Face ID, recover on a second device, receive a push.
 - [ ] Demo video (you record it), slides, and the dashboard submission.

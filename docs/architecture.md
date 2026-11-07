@@ -99,10 +99,31 @@ EIP-1193 request ──▶ createQryptPopupProvider               inpage.js (EIP
 - Turning notifications on subscribes the browser (VAPID) and `POST`s `/api/push` with the subscription, signed by the Falcon key and checked through ERC-1271 like recovery. Only known push-service hosts are accepted.
 - `scripts/push-watcher.ts` runs on the laptop. It reloads subscriptions from Blob every minute, reads `Transfer` logs to those accounts every 4 seconds (ERC-20s, and ETH through the EIP-7708 system address), and sends Web Push. Subscriptions the push service reports gone are deleted.
 
+## Swaps (Uniswap v4)
+
+- `scripts/deploy-uniswap.ts` deploys v4 from the npm artifacts and seeds USDC/tEUR and ETH/USDC pools. The canonical Permit2 is predeployed on the devnet.
+- `lib/uniswap-v4.ts` is pure: pool keys, price math, and router calldata in the Universal Router 2.1.0 struct layouts.
+- `lib/swap.ts` routes (direct, or two hops through USDC), quotes with V4Quoter, and prices impact against StateView. It builds the calls `token.approve(Permit2)`, `Permit2.approve(router, amount, 0)` and `UniversalRouter.execute`.
+- `buildWalletTx({ atomic: true })` sets EIP-8141's ATOMIC_BATCH flag on every call frame but the last. A revert anywhere in the calls undoes all of them, while the USDC gas repayment frame stays outside the batch.
+- `useWallet().actions.swap` re-quotes before signing and returns `price-moved` instead of signing if the market moved past the reviewed minimum.
+
+## Sponsored onboarding and World ID
+
+- `api/world.ts` signs an RP context per request.
+- `createAccount` checks the factory for the key first. A new key needs `IDKitRequestWidget` with `proofOfHuman({ signal: keccak256(pubkey) })`.
+- `api/onboard.ts` (through `api/_world.ts`) then:
+  1. checks the action, environment, credential and signal binding;
+  2. verifies with World's v4 endpoint;
+  3. claims the nullifier with a no-overwrite Blob write (`world/<action>/<nullifier>.json`);
+  4. deploys the account, and releases the claim if deployment fails.
+- Test suites skip it with `x-qrypt-test-key`.
+
 ## Trust and limits
 
 - The Falcon verifier and helper are unaudited research code (ZKNOX, experimental branch).
 - The paymaster charges on `max_cost`, not on actual gas used. There is no post-op refund yet.
 - Each user's Falcon key lives in their browser, encrypted by the vault, and is recoverable from their backup file or, with Face ID, from the ciphertext on our server.
-- Recovery and notifications use our private Blob store; notifications also need the laptop watcher. The CLI demo account's key lives in `.qpay/falcon-seed.hex`.
+- Recovery and notifications use our private Blob store; notifications also need the laptop watcher.
+- The Uniswap pools are devnet test liquidity that we seeded; their prices are what we set.
+- World ID runs on a staging app during the hackathon, so Simulator identities pass. Production needs real Orb-verified humans. The CLI demo account's key lives in `.qpay/falcon-seed.hex`.
 - The extension needs the hosted wallet site to be reachable, since approvals happen there.

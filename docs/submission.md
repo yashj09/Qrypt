@@ -46,7 +46,7 @@ Payments are where it starts; Qrypt is a whole wallet on the same transactions:
   - Verification uses ZKNOX ETHFALCON's experimental `falcon_core8`, behind an ERC-7913-style adapter we wrote.
   - A converter contract turns the signer's coefficient-domain key into the verifier's NTT-domain key once, with a free `eth_call`.
 - **Mempool:** a fork of forshtat/mempool-workshop-sidecar with ERC-8421 BUDGET-010, meaning per-entity gas sums, a staked ceiling, and a stake check. It relays admitted transactions to ethrex through `ethrex_submitPrivilegedFrameTransaction`.
-- **Client:** a TypeScript frame-transaction builder on the devnet's wire layout. In it, the Falcon signature sits in an ARBITRARY signature entry, which is left out of the signature hash. The client is built with viem, Vite, React, shadcn/ui on Base UI, and Motion. It has a landing page and the app: a light wallet surface plus a dark "under the hood" inspector that shows the live mempool verdicts, per-frame gas against the 100k cap, and stress tests. The transaction builder takes any list of calls after the three fixed frames, which is what every wallet feature builds on.
+- **Client:** a TypeScript frame-transaction builder on the devnet's wire layout. In it, the Falcon signature sits in an ARBITRARY signature entry, which is left out of the signature hash. The client is built with viem, Vite, React, shadcn/ui on Base UI, and Motion. It has a landing page and the app: one dark dashboard shared with the extension, with an "under the hood" inspector (pinnable beside any screen) that shows the live mempool verdicts, per-frame gas against the 100k cap, and stress tests. Phones get their own layout and an installable PWA. The transaction builder takes any list of calls after the three fixed frames, which is what every wallet feature builds on.
 - **Extension:** MV3, its pages built from the same React code as the website (a `KeyStore` interface swaps localStorage for an encrypted vault). Approvals happen in an extension window that reuses the website's review/execute code. Tested end to end with Playwright's Chromium against the live devnet: onboarding, lock/unlock, popup send, EIP-6963 connect, ERC-1271 sign-in, a dapp transaction, key rotation, backup and import.
 - **No-install connect:** an EIP-1193 popup provider and the website's `/connect` approval page.
 - **Account v2:** `receive()`, `rotateKey` callable only by the account itself, and ERC-1271. Solidity routes empty-calldata calls to `receive()`, so a zero-value one runs the VERIFY logic.
@@ -72,9 +72,34 @@ Both are in one transaction. The canonical mempool rejects it. We admit it on th
 6. **Real USDC on the devnet is a proxy.** A paymaster that reads its balance touches the implementation slot, which isn't associated with the sender, so the paymaster has to be staked. A non-proxy test stablecoin predeploy, or a note in the docs, would help.
 7. **The hegota-support package is very helpful.** One rough edge: its Solidity sources can't be reached through pnpm's symlinked `node_modules` without vendoring them.
 
+## Partner prize: Uniswap Foundation, Build with Uniswap
+
+**How we used it.** The devnet had no DEX, so we deployed Uniswap v4 ourselves from the official npm artifacts:
+- the contracts: PoolManager, PositionManager, Universal Router 2.1.0, V4Quoter and StateView, with the predeployed canonical Permit2;
+- the pools: USDC/tEUR (0.05%) and native ETH/USDC (0.30%, at the paymaster's own price). tEUR↔ETH routes through USDC as a two-hop v4 swap.
+
+A Qrypt swap is one Falcon-signed EIP-8141 frame transaction:
+- three calls: `token.approve(Permit2)`, `Permit2.approve(router, amount, expiration 0)` (this block only) and `UniversalRouter.execute(V4_SWAP)`;
+- they run as an atomic batch, so a revert after the approvals undoes them;
+- gas is paid in USDC by our paymaster, and the account holds no ETH.
+
+The wallet quotes with V4Quoter and shows price impact against `StateView`. It re-quotes before signing, and has slippage, minimum received and a high-impact confirmation. Swap is on the web, the phone and the extension. Code pointers are in the README's "Uniswap v4" section; developer feedback is in `FEEDBACK.md`.
+
+## Partner prize: World, Best Use of IDKit
+
+**Trust event:** sponsoring a new account. Each one costs our float 0.02 ETH of stake and 100 USDC, so without a check one person could drain it. **Credential:** World ID 4.0 Proof of Human, the minimum that answers "is this a different human?". Passport allows several per person, Selfie Check is medium assurance, and we need no attributes.
+
+- The proof's signal is `keccak256` of the Falcon public key being sponsored, so it can't be reused for another key.
+- The server checks the action, environment, credential and binding, verifies the proof with `developer.world.org/api/v4/verify`, and claims the nullifier atomically.
+- Paths, all tested against World's staging network with the Simulator:
+  - success;
+  - the same human again, refused and offered recovery;
+  - cancel, which returns to create, recover with Face ID, or import a backup.
+- Integration debrief: `docs/world-id.md`.
+
 ## Links
 
-- Live app: https://qrypt.money
+- Live app: https://qrypt.money (World ID runs on a staging app: verify with the World ID Simulator)
 - Demo dapp: https://qrypt.money/dapp
 - Chrome extension (load unpacked): https://qrypt.money/qrypt-extension.zip
 - Repo: https://github.com/yashj09/qpay

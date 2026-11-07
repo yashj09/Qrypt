@@ -59,11 +59,48 @@ The devnet can be reset at any time. If it has been, `pnpm setup` and `pnpm send
 | On your phone | Below 768 px, `/app` becomes a phone wallet: a dollar balance, Receive / Send / Scan tiles, a number-pad send, payment-request QR codes and pay links (`/pay?to=…&amount=…`), scan to pay with the camera or a photo, and an "Under the hood" sheet. It installs to the home screen as a PWA |
 | Face ID unlock and recovery | The web wallet's key sits in an encrypted vault, unlocked by Face ID / Touch ID (a passkey's WebAuthn PRF) or a password, and locks after 15 idle minutes. With Face ID, an encrypted copy is saved to our server, so a new phone recovers the account with one Face ID prompt. The server only holds ciphertext, and only the account's own Falcon key can write it |
 | Payment notifications | Turn them on in Settings and a push arrives when USDC, a token or ETH comes in, even with Qrypt closed. On iPhone this needs the home-screen app |
+| Swap | Uniswap v4, deployed on the devnet by us. USDC, tEUR and ETH, with tEUR↔ETH routed through USDC. Approve, a one-block Permit2 allowance and the swap run as **one atomic, Falcon-signed transaction** with gas paid in USDC: if the price moves past your minimum, all of it is undone |
+| One sponsored account per human | New accounts are free (we stake 0.02 ETH and add 100 USDC), so onboarding asks for a World ID Proof of Human bound to the new key. The server verifies it with World and claims its nullifier, so one person can't drain the float |
 | Back up and restore | A password-encrypted file (PBKDF2-SHA-256, 600k rounds, AES-GCM), made and read in the browser. Restore checks onchain that the key still controls the account |
 | Rotate the key | A transaction signed by the current key calls `rotateKey`, which only the account itself can call. The old key and old backups stop working |
 | Close the account | One transaction unlocks and withdraws the stake and sweeps every balance to an address you choose |
 
 **Install the extension:** download [qrypt-extension.zip](https://qrypt.money/qrypt-extension.zip), unzip it, open `chrome://extensions`, turn on Developer mode and choose "Load unpacked". (From a clone: `pnpm --filter app build:extension`, then load `extension/dist`.) Onboarding opens by itself: create a wallet or import a backup file from the web wallet. It isn't in the Chrome Web Store.
+
+## Uniswap v4 (partner prize)
+
+The devnet had no DEX, so we deployed Uniswap v4 from the official npm artifacts and built swaps into the wallet:
+
+- **Deployment:** [`scripts/deploy-uniswap.ts`](https://github.com/yashj09/qpay/blob/main/scripts/deploy-uniswap.ts#L83). It deploys PoolManager, PositionManager, Universal Router 2.1.0, V4Quoter and StateView, and uses the predeployed canonical Permit2. It then initializes and seeds the [two pools](https://github.com/yashj09/qpay/blob/main/scripts/deploy-uniswap.ts#L107) with `PositionManager.multicall` ([L161](https://github.com/yashj09/qpay/blob/main/scripts/deploy-uniswap.ts#L161)). Addresses are in [`deployments/1337.json`](deployments/1337.json) under `uniswap`.
+- **Encoding:** [`app/src/lib/uniswap-v4.ts`](https://github.com/yashj09/qpay/blob/main/app/src/lib/uniswap-v4.ts#L173) builds the `V4_SWAP` command (`SWAP_EXACT_IN_SINGLE` or `SWAP_EXACT_IN`, then `SETTLE_ALL`, `TAKE_ALL`), the router 2.1.0 struct layouts, pool keys and price math.
+- **Routing, quoting, calls:**
+  - [`findRoute`](https://github.com/yashj09/qpay/blob/main/app/src/lib/swap.ts#L28) picks a direct pool, or two hops through USDC;
+  - [`quote`](https://github.com/yashj09/qpay/blob/main/app/src/lib/swap.ts#L65) asks V4Quoter, and measures price impact against `StateView.getSlot0`;
+  - [`swapCalls`](https://github.com/yashj09/qpay/blob/main/app/src/lib/swap.ts#L111) builds approve → `Permit2.approve(router, amount, 0)` → `execute`.
+- **One atomic transaction:** [`packages/frametx/src/qpay.ts`](https://github.com/yashj09/qpay/blob/main/packages/frametx/src/qpay.ts#L119) sets EIP-8141's ATOMIC_BATCH flag on the calls. `pnpm check:atomic` proves on the devnet that a revert undoes the earlier approvals.
+- **Wallet:** [`actions.swap`](https://github.com/yashj09/qpay/blob/main/app/src/hooks/use-wallet.ts#L225) re-quotes before signing. The UI ([`swap-panel.tsx`](https://github.com/yashj09/qpay/blob/main/app/src/components/swap/swap-panel.tsx)) shows the minimum received, price impact (5% and above needs a confirmation), slippage, the fee in USDC and the route. It's on desktop, phone and the extension.
+- **Feedback:** [`FEEDBACK.md`](FEEDBACK.md).
+
+```sh
+QPAY_NODE_RPC=https://altmempool.forshtat.com pnpm swap USDC tEUR 10      # CLI swap from the demo account
+QPAY_NODE_RPC=https://altmempool.forshtat.com pnpm swap tEUR ETH 5        # two hops through USDC
+QPAY_NODE_RPC=https://altmempool.forshtat.com pnpm swap USDC tEUR 1 --min-out-too-high   # reverts; only the fee is paid
+```
+
+## World ID (partner prize)
+
+**Trust event:** sponsoring a new account (0.02 ETH of stake plus 100 USDC from our float). **Credential:** Proof of Human, the minimum that answers "a different human". World ID 4.0 only. Full reasoning and debrief: [`docs/world-id.md`](docs/world-id.md).
+
+- **Client:**
+  - [`use-world-proof.tsx`](https://github.com/yashj09/qpay/blob/main/app/src/components/world/use-world-proof.tsx#L34) opens `IDKitRequestWidget` with `proofOfHuman({ signal: keccak256(pubkey) })`;
+  - [`createAccount`](https://github.com/yashj09/qpay/blob/main/app/src/lib/qpay.ts#L155) asks for it between registering the key and deploying, and skips it for a key the factory already knows.
+- **Server:**
+  - [`api/world.ts`](https://github.com/yashj09/qpay/blob/main/app/api/world.ts) signs the RP context;
+  - [`verifyHuman`](https://github.com/yashj09/qpay/blob/main/app/api/_world.ts#L74) checks the action, environment, credential and key binding, then calls World's v4 verify;
+  - [`claimNullifier`](https://github.com/yashj09/qpay/blob/main/app/api/_world.ts#L110) makes it one account per human;
+  - [`api/onboard.ts`](https://github.com/yashj09/qpay/blob/main/app/api/onboard.ts#L63) enforces it.
+- **Paths:** success, the same human twice (refused, offered recovery), and cancel (returns to create, recover or import) are all tested against World's staging network with the Simulator (`pnpm test:world`). Forged and misbound proofs are covered by `pnpm check:world`.
+- **Environment:** the live site uses a **staging** World ID app. Verify with the [World ID Simulator](https://simulator.worldcoin.org) from the QR screen's "Use the simulator" link. Switching to production is one env var.
 
 ## Live demo for judges
 
@@ -123,6 +160,11 @@ pnpm test:mobile                     # iPhone 15 profile: installable PWA, keypa
 pnpm test:push                       # one phone turns on notifications, another pays it, the push watcher delivers
                                      # "Received 1.00 USDC" through the real push service
 pnpm test:pay-request                # pay link / EIP-681 / address parsing
+pnpm test:swap                       # Uniswap v4: USDC -> tEUR and tEUR -> ETH (two hops) in the wallet, phone review
+pnpm test:swap-encoding              # v4 price math, pool keys, router calldata round-trips
+pnpm check:atomic                    # EIP-8141 atomic batch: a revert undoes the earlier calls (on the devnet)
+pnpm test:world                      # World ID via the Simulator: success, same human twice refused, cancel path
+pnpm check:world                     # World ID gate: forged / misbound / wrong-environment proofs refused, nullifier claims
 pnpm test:extension                  # needs `pnpm app` running (for /dapp): Playwright Chromium loads extension/dist,
                                      # onboards with a password, locks/unlocks, sends from the popup, connects a dapp
                                      # (EIP-6963), signs in (ERC-1271), claims tEUR, rotates, backs up, imports, sends
@@ -143,7 +185,7 @@ pnpm test:extension                  # needs `pnpm app` running (for /dapp): Pla
 
 ## Built on
 
-ethrex `eip8141-tracer` (devnet), forshtat/mempool-workshop-sidecar (ERC-8421 sidecar), `@forshtat/hegota-support` (frame opcodes from Solidity), ZKNoxHQ/ETHFALCON (Falcon verifier), `@noble/post-quantum` (Falcon signer), viem, Foundry, Vite, React, shadcn/ui.
+ethrex `eip8141-tracer` (devnet), forshtat/mempool-workshop-sidecar (ERC-8421 sidecar), `@forshtat/hegota-support` (frame opcodes from Solidity), ZKNoxHQ/ETHFALCON (Falcon verifier), `@noble/post-quantum` (Falcon signer), Uniswap v4 (`@uniswap/v4-core`, `v4-periphery`, `universal-router` artifacts), World ID (`@worldcoin/idkit`), viem, Foundry, Vite, React, shadcn/ui.
 
 ## AI usage
 
