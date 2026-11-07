@@ -7,6 +7,7 @@ import { chromium, devices, type Browser, type Page } from "playwright";
 import type { Address } from "viem";
 import { pushPath } from "../app/src/lib/push-format.ts";
 import { ROOT } from "./lib/config.ts";
+import { skipWorldId, testContext } from "./lib/test-world.ts";
 
 /**
  * Payment notifications end to end, through the real push service:
@@ -48,7 +49,7 @@ async function main() {
   const { defaultBrowserType: _ignored, ...android } = devices["Pixel 7"];
   const profile = mkdtempSync(join(tmpdir(), "qrypt-push-"));
   const state = join(profile, "watcher.json");
-  const a = await chromium.launchPersistentContext(profile, { ...android, channel: "chromium", headless: true });
+  const a = await skipWorldId(await chromium.launchPersistentContext(profile, { ...android, channel: "chromium", headless: true }));
   let browser: Browser | undefined;
   let watcher: ReturnType<typeof spawn> | undefined;
   let subscriptionPath: string | undefined;
@@ -96,7 +97,7 @@ async function main() {
     step("push watcher running and sees A's subscription");
 
     browser = await chromium.launch({ channel: "chromium", headless: true });
-    const pageB = await (await browser.newContext(android)).newPage();
+    const pageB = await (await testContext(browser, android)).newPage();
     await onboardWithPassword(pageB);
     await pageB.getByRole("button", { name: "Send", exact: true }).click();
     await pageB.getByRole("button", { name: "1", exact: true }).click();

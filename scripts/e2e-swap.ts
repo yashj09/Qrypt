@@ -1,4 +1,5 @@
 import { chromium, devices, type Page } from "playwright";
+import { testContext } from "./lib/test-world.ts";
 
 /**
  * Uniswap v4 swaps in the wallet, end to end on the devnet:
@@ -49,7 +50,7 @@ async function swapAndWait(page: Page, label: string, title: RegExp) {
 async function main() {
   const browser = await chromium.launch({ channel: "chromium", headless: true });
   try {
-    const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
+    const page = await (await testContext(browser, { viewport: { width: 1440, height: 900 } })).newPage();
     const nav = (name: string) => page.locator("aside nav").getByRole("button", { name, exact: true }).click();
     await onboard(page);
     await page.getByText("Add token").waitFor({ timeout: 90_000 });
@@ -89,7 +90,7 @@ async function main() {
     step("under the hood lists the swap's frames by name");
 
     const { defaultBrowserType: _ignored, ...iphone } = devices["iPhone 15"];
-    const phone = await (await browser.newContext(iphone)).newPage();
+    const phone = await (await testContext(browser, iphone)).newPage();
     await onboard(phone);
     await phone.getByRole("button", { name: "Swap", exact: true }).click({ timeout: 90_000 });
     await phone.locator("#swap-amount").fill("25");

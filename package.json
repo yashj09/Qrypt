@@ -22,7 +22,9 @@
     "deploy:uniswap": "tsx scripts/deploy-uniswap.ts",
     "test:swap-encoding": "tsx scripts/check-swap.ts",
     "swap": "tsx scripts/swap.ts",
-    "test:swap": "tsx scripts/e2e-swap.ts"
+    "test:swap": "tsx scripts/e2e-swap.ts",
+    "check:world": "tsx scripts/check-world.ts",
+    "test:world": "tsx scripts/e2e-world.ts"
   },
   "dependencies": {
     "@forshtat/hegota-support": "0.0.1",
@@ -40,6 +42,7 @@
     "@uniswap/v4-core": "1.0.2",
     "@uniswap/v4-periphery": "1.0.3",
     "@vercel/blob": "^2.8.2",
+    "@worldcoin/idkit-core": "4.6.0",
     "playwright": "^1.64.1",
     "qrcode": "^1.5.4",
     "web-push": "^3.6.7"

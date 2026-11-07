@@ -15,6 +15,10 @@ import { OnboardCard } from "@/components/wallet/onboard-card"
 import { RestoreDialog } from "@/components/wallet/restore-dialog"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { useWallet } from "@/hooks/use-wallet"
+import { WorldIssue } from "@/components/world/world-issue"
+import { useWorldGate, useWorldProof } from "@/components/world/use-world-proof"
+import { WorldIdError } from "@/lib/world"
+import type { Address } from "viem"
 import { openBackup } from "@/lib/keys"
 import { askPasskey, passkeysAllowedHere } from "@/lib/passkey"
 import { parsePaymentRequest } from "@/lib/payment-request"
@@ -63,11 +67,25 @@ function WalletPage() {
   const phone = useMediaQuery("(max-width: 767px)")
   const [payRequest] = useState(() => (window.location.pathname.replace(/\/+$/, "") === "/pay" ? parsePaymentRequest(window.location.href) ?? undefined : undefined))
   const needsVault = vaultState === "none"
+  const [worldIssue, setWorldIssue] = useState<WorldIdError | null>(null)
+  const world = useWorldProof()
+  const humanCheck = useWorldGate()
 
   const create = async (protection?: Protection) => {
     if (!deployment) throw new Error("Still connecting to the network. Try again in a moment.")
+    setWorldIssue(null)
     if (protection) await webVault.create(protection)
-    const created = await actions.create()
+    let created: Address | null
+    try {
+      created = await actions.create(world.prove)
+    } catch (e) {
+      if (!(e instanceof WorldIdError)) throw e
+      // No account was made. A vault created in this attempt only holds a key nobody has seen, so remove it and
+      // start over: recovery, a backup file, or another try are all offered again.
+      if (protection) await webVault.destroy()
+      setWorldIssue(e)
+      return
+    }
     if (created && protection && "passkey" in protection) {
       await uploadRecovery(created, protection.passkey, (await webVault.keyStore.seed())!).catch((e) =>
         w.setNotice(`Account created, but Face ID recovery wasn't saved: ${(e as Error).message}. Save it from Settings.`),
@@ -148,6 +166,7 @@ function WalletPage() {
             <AlertDescription className="break-all">{error}</AlertDescription>
           </Alert>
         )}
+        {worldIssue && <WorldIssue issue={worldIssue} />}
         <OnboardCard
           stage={stage}
           disabled={!deployment}
@@ -155,7 +174,9 @@ function WalletPage() {
           onCreate={create}
           onRestore={() => setRestoreOpen(true)}
           onRecover={passkeysAllowedHere() ? recover : undefined}
+          humanCheck={humanCheck ?? false}
         />
+        {world.element}
         <RestoreDialog open={restoreOpen} onOpenChange={setRestoreOpen} needsVault={needsVault} onRestore={restore} />
       </div>
     </div>

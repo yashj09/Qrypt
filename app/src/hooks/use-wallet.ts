@@ -23,6 +23,7 @@ import {
 import { addCustomToken, assetDecimals, assetKey, assetSymbol, balanceOf, formatAsset, knownAssets, readWallet, transferCall, type Asset, type WalletSnapshot } from "@/lib/assets"
 import { currencyOf, quote, routeLabel, swapCalls, usdPrices, type Quote } from "@/lib/swap"
 import { minOut } from "@/lib/uniswap-v4"
+import { WorldIdError, type ProveHuman } from "@/lib/world"
 import { closeAccountCalls, createBackup, downloadBackup, prepareRotation, restoreBackup, settleRotation } from "@/lib/keys"
 import { loadActivity, runPhase, saveActivity, toActivity, type ActivityEntry, type Intent, type Run } from "@/lib/run"
 import { short } from "@/lib/format"
@@ -185,14 +186,16 @@ export function useWallet() {
 
   const actions = {
     /** Creates the account for the key store's seed; returns its address, or null if it failed (the error is shown). */
-    async create(): Promise<Address | null> {
+    /** Throws WorldIdError when World ID didn't approve, so the screen can offer the alternatives. */
+    async create(proveHuman?: ProveHuman): Promise<Address | null> {
       if (!deployment) return null
       setError(null)
       try {
-        const created = await createAccount(deployment, setStage)
+        const created = await createAccount(deployment, setStage, proveHuman)
         selectAccount(created)
         return created
       } catch (e) {
+        if (e instanceof WorldIdError) throw e
         setError(message(e))
         return null
       } finally {

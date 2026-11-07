@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { chromium, type BrowserContext, type Worker } from "playwright";
 import { ROOT } from "./config.ts";
+import { skipWorldId } from "./test-world.ts";
 
 export const EXTENSION_DIST = resolve(ROOT, "extension/dist");
 
@@ -14,6 +15,7 @@ export async function launchWithExtension(): Promise<{ context: BrowserContext; 
     viewport: { width: 1280, height: 800 },
     args: [`--disable-extensions-except=${EXTENSION_DIST}`, `--load-extension=${EXTENSION_DIST}`],
   });
+  await skipWorldId(context);
   const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent("serviceworker"));
   return { context, id: new URL(worker.url()).host, worker };
 }

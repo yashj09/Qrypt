@@ -7,7 +7,7 @@ import { Spinner } from "@/components/ui/spinner"
 import type { OnboardStage } from "@/lib/qpay"
 import { ProtectionChoice, type Protection } from "@/components/vault/protection-choice"
 
-const STAGES: { key: OnboardStage; title: string; detail: string }[] = [
+const ALL_STAGES: { key: OnboardStage; title: string; detail: string }[] = [
   {
     key: "key",
     title: "Generate your Falcon key",
@@ -17,6 +17,12 @@ const STAGES: { key: OnboardStage; title: string; detail: string }[] = [
     key: "register",
     title: "Register the public key",
     detail: "Converted to the onchain verifier's format with a free read call.",
+  },
+  {
+    key: "human",
+    title: "Prove you're a unique human",
+    detail:
+      "Your account is free: we stake 0.02 ETH and add 100 test USDC. World ID keeps that to one per person. We only get an anonymous ID, nothing about you.",
   },
   {
     key: "deploy",
@@ -34,9 +40,12 @@ interface Props {
   onRestore: () => void
   /** Face ID recovery, offered when this device has no vault and the browser supports passkeys. */
   onRecover?: () => Promise<void>
+  /** The server requires World ID for a new sponsored account. */
+  humanCheck?: boolean
 }
 
-export function OnboardCard({ stage, disabled, needsVault, onCreate, onRestore, onRecover }: Props) {
+export function OnboardCard({ stage, disabled, needsVault, onCreate, onRestore, onRecover, humanCheck }: Props) {
+  const STAGES = ALL_STAGES.filter((s) => s.key !== "human" || humanCheck)
   const busy = stage !== null
   const [recovering, setRecovering] = useState(false)
   const [recoverError, setRecoverError] = useState<string | null>(null)

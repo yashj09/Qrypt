@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium, devices, type Page } from "playwright";
 import QRCode from "qrcode";
+import { testContext } from "./lib/test-world.ts";
 
 /**
  * The phone wallet on an iPhone 15 profile, with Chromium's virtual WebAuthn authenticator as Face ID:
@@ -57,7 +58,7 @@ async function main() {
   const { defaultBrowserType: _ignored, ...iphone } = devices["iPhone 15"];
   const browser = await chromium.launch({ channel: "chromium", headless: true });
   try {
-    const page = await (await browser.newContext(iphone)).newPage();
+    const page = await (await testContext(browser, iphone)).newPage();
     await page.goto(`${WALLET}/app`);
     await faceId(page);
     await page.reload();

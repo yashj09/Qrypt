@@ -38,11 +38,17 @@ function devApi(): Plugin {
           return res.end()
         }
         const hasBody = req.method !== "GET" && req.method !== "HEAD"
+        // Forward the caller's headers like Vercel does (functions read e.g. x-qrypt-test-key), minus hop-by-hop ones.
+        const headers = new Headers({ "content-type": "application/json" })
+        for (const [key, value] of Object.entries(req.headers)) {
+          if (value === undefined || ["host", "connection", "content-length", "transfer-encoding"].includes(key)) continue
+          headers.set(key, Array.isArray(value) ? value.join(", ") : value)
+        }
         const response: Response = await handler(
           new Request(`http://localhost/api/${name}${url.search}`, {
             method: req.method,
             body: hasBody ? Buffer.concat(chunks) : undefined,
-            headers: { "content-type": "application/json" },
+            headers,
           }),
         )
         res.statusCode = response.status
