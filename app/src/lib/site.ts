@@ -10,13 +10,13 @@ export const VAPID_PUBLIC_KEY: string =
 export const API_BASE: string = import.meta.env.VITE_API_BASE ?? ""
 
 export const links = {
-  repo: "https://github.com/yashj09/qpay",
+  repo: "https://github.com/yashj09/Qrypt",
   sidecarPr: "https://github.com/forshtat/mempool-workshop-sidecar/pull/2",
-  safetyDoc: "https://github.com/yashj09/qpay/blob/main/docs/mempool-safety.md",
-  contracts: "https://github.com/yashj09/qpay/tree/main/contracts/src",
-  frametx: "https://github.com/yashj09/qpay/tree/main/packages/frametx",
+  safetyDoc: "https://github.com/yashj09/Qrypt/blob/main/docs/mempool-safety.md",
+  contracts: "https://github.com/yashj09/Qrypt/tree/main/contracts/src",
+  frametx: "https://github.com/yashj09/Qrypt/tree/main/packages/frametx",
   sidecarFork: "https://github.com/yashj09/mempool-workshop-sidecar/tree/budget-010",
-  connect: "https://github.com/yashj09/qpay/tree/main/extension",
+  connect: "https://github.com/yashj09/Qrypt/tree/main/extension",
 }
 
 export const explorerTx = (hash: string, node: string) =>

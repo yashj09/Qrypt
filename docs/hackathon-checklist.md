@@ -5,7 +5,7 @@ These are taken from the official event pages: the rules page and the prizes pag
 ## Deadlines (IST)
 
 - [ ] Submit by **Sat 7 Nov, 09:00**. Late submissions are not accepted.
-- [ ] Have the demo video recorded by Sat 07:00.
+- [x] Demo video recorded (3:53): https://github.com/yashj09/Qrypt/releases/download/demo-video/qrypt-demo-final.mp4
 - [ ] Judging runs 09:30–12:30 Sat. A finalist presentation is 4 minutes of demo plus 3 minutes of Q&A.
 
 ## Rules
@@ -19,6 +19,7 @@ These are taken from the official event pages: the rules page and the prizes pag
 
 - [ ] Title, description and repo link.
 - [ ] Partner prize: EF "Best use of the Frame Transaction Alternative Mempool". Explain how we used it, and give feedback.
+- [ ] Partner prize: Uniswap Foundation "Build with Uniswap". `FEEDBACK.md` in the repo, and submit the Uniswap Developer Feedback Form linking it.
 - [ ] Optional demo video: 2–4 minutes, 720p or better, real narration (no AI voice), not sped up, not recorded on a phone.
 
 ## EF alt-mempool prize qualification

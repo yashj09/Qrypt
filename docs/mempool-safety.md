@@ -4,8 +4,8 @@ The alt-mempool team asked every project, after they lifted the devnet's validat
 
 > explain why spending 10 million gas in verify frame is not going to be a problem for the mempool nodes and block builders who will need to run all of this before getting paid one cent, and why this is not violating CROPS … The point is to have *some* viable public mempool option for your validations, not to whitelist your contract on Alchemy.
 
-This page answers that for Q-Pay, with numbers measured on the public devnet. The short answer has three parts:
-- Q-Pay doesn't need unlimited validation. It needs about **0.72M gas**, bounded, from a **staked** entity.
+This page answers that for Qrypt, with numbers measured on the public devnet. The short answer has three parts:
+- Qrypt doesn't need unlimited validation. It needs about **0.72M gas**, bounded, from a **staked** entity.
 - Its validation **can't be invalidated by anyone but the sender**.
 - The rule that admits it (ERC-8421 BUDGET-010) is open to every account, with **no allowlist**.
 
@@ -18,7 +18,7 @@ This page answers that for Q-Pay, with numbers measured on the public devnet. Th
 
 **Measured node cost.** These are medians of 15 calls against the hosted ethrex node, with the latency of a no-op RPC subtracted. They come from one node over the network, so treat them as indicative.
 
-| Work | Q-Pay transaction | Trivial frame transaction (ECDSA self-relay) |
+| Work | Qrypt transaction | Trivial frame transaction (ECDSA self-relay) |
 |---|---|---|
 | Executing it (`ethrex_simulateFrameTransaction`, no trace) | about **5 ms** | about 0 ms |
 | ERC-7562 traced validation (what a sidecar runs once at admission) | about **305 ms** | about 0 ms |
@@ -34,18 +34,18 @@ So executing a Falcon check is cheap: about 5 ms, or roughly 1/80 of a 60M-gas b
 
 **Expensive validation costs the sender something.** Only staked entities get more than 100k. Stake is locked capital with an unstake delay, so each identity that wants the larger budget must lock funds. ERC-8421's reputation rules (`opsSeen` versus `opsIncluded`, throttling, banning) then cap how much unpaid validation work any one staked entity can cause. An attacker needs fresh stake per identity, and each identity's pending transactions are limited.
 
-**There's no free option and no mass invalidation.** This is the property that makes heavy validation dangerous elsewhere, and Q-Pay doesn't have it:
+**There's no free option and no mass invalidation.** This is the property that makes heavy validation dangerous elsewhere, and Qrypt doesn't have it:
 - The account's VERIFY frame is a **pure function** of the transaction bytes, the account's own storage and immutable code. A signature that verifies at admission still verifies when a builder includes the transaction. The only things that invalidate it are the sender's own nonce moving or the sender replacing its key, and both need the sender's own Falcon-signed transaction.
 - The paymaster's VERIFY frame reads only the sender's USDC balance. That balance only goes down through a transfer the sender signs.
-- No third party can flip many pending Q-Pay transactions from valid to invalid with one cheap state change. Compare a privacy pool whose root rotates, or a paymaster reading a shared oracle.
+- No third party can flip many pending Qrypt transactions from valid to invalid with one cheap state change. Compare a privacy pool whose root rotates, or a paymaster reading a shared oracle.
 
 **Failed validation is cheap and attributable.** If the signature is wrong, frame 0 reverts with `BadFalconSignature()` before `APPROVE`. The node has spent at most one bounded simulation, the staked sender takes the reputation hit, and nobody is charged. We demo this path live.
 
 ## 3. Why builders don't run it "before getting paid one cent"
 
 - **Builders get paid.** The paymaster approves payment in frame 1, after the account's VERIFY succeeds, and the transaction pays its full gas in ETH: about 821k gas, all at the offered price. Builders don't run unpaid validation. Validation that passes the mempool passes again in the block, for the determinism reasons in section 2.
-- **The mempool pays once per transaction,** not once per block. That's the ERC-7562 tracing in section 1. Because our validation reads no third-party state, a node never has to re-trace a pending Q-Pay transaction when unrelated state changes. One admission costs one trace.
-- **The whole transaction is about 1.4% of a 60M-gas block.** A builder including 40 Q-Pay transactions spends about half a block of gas on them and is paid for all of it.
+- **The mempool pays once per transaction,** not once per block. That's the ERC-7562 tracing in section 1. Because our validation reads no third-party state, a node never has to re-trace a pending Qrypt transaction when unrelated state changes. One admission costs one trace.
+- **The whole transaction is about 1.4% of a 60M-gas block.** A builder including 40 Qrypt transactions spends about half a block of gas on them and is paid for all of it.
 
 ## 4. Why this doesn't violate CROPS
 

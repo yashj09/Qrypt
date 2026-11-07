@@ -90,7 +90,7 @@ The wallet quotes with V4Quoter and shows price impact against `StateView`. It r
 - Live app: https://qrypt.money
 - Demo dapp: https://qrypt.money/dapp
 - Chrome extension (load unpacked): https://qrypt.money/qrypt-extension.zip
-- Repo: https://github.com/yashj09/qpay
+- Repo: https://github.com/yashj09/Qrypt
 - Sidecar fork (BUDGET-010): https://github.com/yashj09/mempool-workshop-sidecar/tree/budget-010
 - Upstream PR: https://github.com/forshtat/mempool-workshop-sidecar/pull/2
-- Demo video: to be added
+- Demo video: https://github.com/yashj09/Qrypt/releases/download/demo-video/qrypt-demo-final.mp4

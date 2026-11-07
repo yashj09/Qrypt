@@ -2,7 +2,7 @@
 
 **The post-quantum wallet on EIP-8141. Falcon-512 signatures, gas paid in USDC, zero ETH, zero middlemen.**
 
-Qrypt was called Q-Pay, then Eyrie, while we built it, so the repo, the contracts (`QPayAccount` and the rest) and the `@qpay/*` packages keep the first name. Its home is [qrypt.money](https://qrypt.money).
+Qrypt was called Q-Pay, then Eyrie, while we built it, so the contracts (`QPayAccount` and the rest) and the `@qpay/*` packages keep the first name. Its home is [qrypt.money](https://qrypt.money). **Demo video (3:53):** [qrypt-demo-final.mp4](https://github.com/yashj09/Qrypt/releases/download/demo-video/qrypt-demo-final.mp4).
 
 Qrypt is a smart-account wallet whose only key is **Falcon-512**; there is no ECDSA key anywhere. Payments are its first job: a brand-new account that holds only USDC sends a payment. A permissionless paymaster pays the gas and takes it back **in USDC inside the same transaction**. There is no bundler, relayer or paymaster server: the validation rules are code running in VERIFY frames.
 
@@ -11,7 +11,7 @@ Qrypt is a smart-account wallet whose only key is **Falcon-512**; there is no EC
 | **Canonical mempool** (EIP-8141) | **Rejects** it: the Falcon check costs about 0.7M gas, over the 100k validation cap, and the paymaster reads storage outside `tx.sender` |
 | **Alternative mempool** (ERC-8421) | **Admits** it, under the per-entity validation budget (BUDGET-010) we implemented in the sidecar: the staked account gets up to 1M, and the unstaked paymaster stays under 100k |
 
-Built at ETHGlobal Mumbai 2026 for the Ethereum Foundation "Best use of the Frame Transaction Alternative Mempool" prize. Its brief names PQ-secure smart wallets and ERC-20 paymasters. Qrypt does both in one transaction.
+Built at ETHGlobal Mumbai 2026. It targets the Ethereum Foundation "Best use of the Frame Transaction Alternative Mempool" prize, whose brief names PQ-secure smart wallets and ERC-20 paymasters (Qrypt does both in one transaction), and Uniswap's "Build with Uniswap" (swaps on a Uniswap v4 we deployed on the devnet).
 
 ![Qrypt: the Send screen with the under-the-hood inspector pinned beside it, showing each mempool's verdict, the block, 0 wei of ETH on gas and the fee in USDC](docs/media/app.png)
 
@@ -56,7 +56,7 @@ The devnet can be reset at any time. If it has been, `pnpm setup` and `pnpm send
 | Browser extension | A full wallet in the toolbar (Talisman-style): balance, assets, send, receive, activity, and a **Fullscreen** dashboard tab with under the hood, connected sites and settings. The Falcon key lives in an encrypted vault: password unlock, auto-lock after 15 idle minutes, Touch ID where the browser supports WebAuthn PRF. Dapps find it through EIP-6963 and approve in the extension's own window |
 | Connect without installing | An EIP-1193 provider opens the web wallet's `/connect` page in a popup. Try both ways at [/dapp](https://qrypt.money/dapp) |
 | Sign in with Qrypt | `personal_sign` and `eth_signTypedData_v4` return a Falcon signature over the EIP-191/712 hash; the account's `isValidSignature` (ERC-1271) checks it onchain |
-| On your phone | Below 768 px, `/app` becomes a phone wallet: a dollar balance, Receive / Send / Scan tiles, a number-pad send, payment-request QR codes and pay links (`/pay?to=…&amount=…`), scan to pay with the camera or a photo, and an "Under the hood" sheet. It installs to the home screen as a PWA |
+| On your phone | Below 768 px, `/app` becomes a phone wallet: a dollar balance, Receive / Send / Swap / Scan tiles, a number-pad send, payment-request QR codes and pay links (`/pay?to=…&amount=…`), scan to pay with the camera or a photo, and an "Under the hood" sheet. It installs to the home screen as a PWA |
 | Face ID unlock and recovery | The web wallet's key sits in an encrypted vault, unlocked by Face ID / Touch ID (a passkey's WebAuthn PRF) or a password, and locks after 15 idle minutes. With Face ID, an encrypted copy is saved to our server, so a new phone recovers the account with one Face ID prompt. The server only holds ciphertext, and only the account's own Falcon key can write it |
 | Payment notifications | Turn them on in Settings and a push arrives when USDC, a token or ETH comes in, even with Qrypt closed. On iPhone this needs the home-screen app |
 | Swap | Uniswap v4, deployed on the devnet by us. USDC, tEUR and ETH, with tEUR↔ETH routed through USDC. Approve, a one-block Permit2 allowance and the swap run as **one atomic, Falcon-signed transaction** with gas paid in USDC: if the price moves past your minimum, all of it is undone |
@@ -70,14 +70,14 @@ The devnet can be reset at any time. If it has been, `pnpm setup` and `pnpm send
 
 The devnet had no DEX, so we deployed Uniswap v4 from the official npm artifacts and built swaps into the wallet:
 
-- **Deployment:** [`scripts/deploy-uniswap.ts`](https://github.com/yashj09/qpay/blob/main/scripts/deploy-uniswap.ts#L83). It deploys PoolManager, PositionManager, Universal Router 2.1.0, V4Quoter and StateView, and uses the predeployed canonical Permit2. It then initializes and seeds the [two pools](https://github.com/yashj09/qpay/blob/main/scripts/deploy-uniswap.ts#L107) with `PositionManager.multicall` ([L161](https://github.com/yashj09/qpay/blob/main/scripts/deploy-uniswap.ts#L161)). Addresses are in [`deployments/1337.json`](deployments/1337.json) under `uniswap`.
-- **Encoding:** [`app/src/lib/uniswap-v4.ts`](https://github.com/yashj09/qpay/blob/main/app/src/lib/uniswap-v4.ts#L173) builds the `V4_SWAP` command (`SWAP_EXACT_IN_SINGLE` or `SWAP_EXACT_IN`, then `SETTLE_ALL`, `TAKE_ALL`), the router 2.1.0 struct layouts, pool keys and price math.
+- **Deployment:** [`scripts/deploy-uniswap.ts`](https://github.com/yashj09/Qrypt/blob/main/scripts/deploy-uniswap.ts#L83). It deploys PoolManager, PositionManager, Universal Router 2.1.0, V4Quoter and StateView, and uses the predeployed canonical Permit2. It then initializes and seeds the [two pools](https://github.com/yashj09/Qrypt/blob/main/scripts/deploy-uniswap.ts#L107) with `PositionManager.multicall` ([L161](https://github.com/yashj09/Qrypt/blob/main/scripts/deploy-uniswap.ts#L161)). Addresses are in [`deployments/1337.json`](deployments/1337.json) under `uniswap`.
+- **Encoding:** [`app/src/lib/uniswap-v4.ts`](https://github.com/yashj09/Qrypt/blob/main/app/src/lib/uniswap-v4.ts#L173) builds the `V4_SWAP` command (`SWAP_EXACT_IN_SINGLE` or `SWAP_EXACT_IN`, then `SETTLE_ALL`, `TAKE_ALL`), the router 2.1.0 struct layouts, pool keys and price math.
 - **Routing, quoting, calls:**
-  - [`findRoute`](https://github.com/yashj09/qpay/blob/main/app/src/lib/swap.ts#L28) picks a direct pool, or two hops through USDC;
-  - [`quote`](https://github.com/yashj09/qpay/blob/main/app/src/lib/swap.ts#L65) asks V4Quoter, and measures price impact against `StateView.getSlot0`;
-  - [`swapCalls`](https://github.com/yashj09/qpay/blob/main/app/src/lib/swap.ts#L111) builds approve → `Permit2.approve(router, amount, 0)` → `execute`.
-- **One atomic transaction:** [`packages/frametx/src/qpay.ts`](https://github.com/yashj09/qpay/blob/main/packages/frametx/src/qpay.ts#L119) sets EIP-8141's ATOMIC_BATCH flag on the calls. `pnpm check:atomic` proves on the devnet that a revert undoes the earlier approvals.
-- **Wallet:** [`actions.swap`](https://github.com/yashj09/qpay/blob/main/app/src/hooks/use-wallet.ts#L225) re-quotes before signing. The UI ([`swap-panel.tsx`](https://github.com/yashj09/qpay/blob/main/app/src/components/swap/swap-panel.tsx)) shows the minimum received, price impact (5% and above needs a confirmation), slippage, the fee in USDC and the route. It's on desktop, phone and the extension.
+  - [`findRoute`](https://github.com/yashj09/Qrypt/blob/main/app/src/lib/swap.ts#L28) picks a direct pool, or two hops through USDC;
+  - [`quote`](https://github.com/yashj09/Qrypt/blob/main/app/src/lib/swap.ts#L65) asks V4Quoter, and measures price impact against `StateView.getSlot0`;
+  - [`swapCalls`](https://github.com/yashj09/Qrypt/blob/main/app/src/lib/swap.ts#L111) builds approve → `Permit2.approve(router, amount, 0)` → `execute`.
+- **One atomic transaction:** [`packages/frametx/src/qpay.ts`](https://github.com/yashj09/Qrypt/blob/main/packages/frametx/src/qpay.ts#L119) sets EIP-8141's ATOMIC_BATCH flag on the calls. `pnpm check:atomic` proves on the devnet that a revert undoes the earlier approvals.
+- **Wallet:** [`actions.swap`](https://github.com/yashj09/Qrypt/blob/main/app/src/hooks/use-wallet.ts#L222) re-quotes before signing. The UI ([`swap-panel.tsx`](https://github.com/yashj09/Qrypt/blob/main/app/src/components/swap/swap-panel.tsx)) shows the minimum received, price impact (5% and above needs a confirmation), slippage, the fee in USDC and the route. It's on desktop, phone and the extension.
 - **Feedback:** [`FEEDBACK.md`](FEEDBACK.md).
 
 ```sh
@@ -125,6 +125,9 @@ QPAY_NODE_RPC=https://altmempool.forshtat.com pnpm app
 
 # after changing QPayAccount: redeploy only the factory layer (factory, tEUR, demo account)
 QPAY_NODE_RPC=https://altmempool.forshtat.com pnpm deploy:account
+
+# deploy Uniswap v4 and seed the USDC/tEUR and ETH/USDC pools (idempotent)
+QPAY_NODE_RPC=https://altmempool.forshtat.com pnpm deploy:uniswap
 
 # rebuild the extension zip the landing page serves
 pnpm pack:extension

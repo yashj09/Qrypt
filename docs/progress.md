@@ -31,4 +31,5 @@
 - [ ] Uniswap Developer Feedback Form (you), linking `FEEDBACK.md`.
 - [ ] Touch ID checked by hand on your Mac (Chrome and Dia).
 - [ ] On your iPhone, at qrypt.money: install to the home screen, create with Face ID, recover on a second device, receive a push.
-- [ ] Demo video (you record it), slides, and the dashboard submission.
+- [x] Demo video: scripted capture of the live site (`scripts/video/`), your voice and face, captions. 3:53, on the `demo-video` GitHub release.
+- [ ] Slides and the dashboard submission.
