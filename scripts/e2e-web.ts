@@ -1,5 +1,4 @@
 import { chromium } from "playwright";
-import { testContext } from "./lib/test-world.ts";
 
 /** The website wallet end to end: onboard a fresh account in /app, pin the inspector, send 1 USDC, see it included. */
 const WALLET = process.env.QRYPT_WALLET ?? "http://localhost:5180";
@@ -8,7 +7,7 @@ const step = (msg: string) => console.log(`- ${msg}`);
 async function main() {
   const browser = await chromium.launch({ channel: "chromium", headless: true });
   try {
-    const page = await (await testContext(browser, { viewport: { width: 1440, height: 900 } })).newPage();
+    const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
     const nav = (name: string) => page.locator("aside nav").getByRole("button", { name, exact: true }).click();
     await page.goto(`${WALLET}/app`);
     await page.locator("#vault-password").fill("web-e2e-password", { timeout: 30_000 });

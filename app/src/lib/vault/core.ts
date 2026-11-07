@@ -164,12 +164,6 @@ export function makeVault(backend: VaultBackend) {
     },
 
     lock: () => backend.remove("session", SESSION),
-    /** Deletes this device's vault. Only for a key that never got an account, e.g. an onboarding that was abandoned. */
-    async destroy() {
-      // Vault first: in between, the state reads "none" rather than "locked", so screens don't flash the lock.
-      await backend.remove("local", VAULT)
-      await backend.remove("session", SESSION)
-    },
 
     /** Keeps an unlocked session alive while the user is active. */
     async touch() {

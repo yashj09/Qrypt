@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input"
 import { Item, ItemContent, ItemDescription, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item"
 import { Spinner } from "@/components/ui/spinner"
 import { openBackup } from "@/lib/keys"
-import { useWorldGate, useWorldProof } from "@/components/world/use-world-proof"
 import { createAccount, loadDeployment, storeAccount, type Deployment, type OnboardStage } from "@/lib/qpay"
 import { short } from "@/lib/format"
 import { mount, openFullscreen } from "./mount"
@@ -28,7 +27,6 @@ type Step =
 const STAGES: { key: OnboardStage; title: string }[] = [
   { key: "key", title: "Generating your Falcon key on this device" },
   { key: "register", title: "Registering the public key" },
-  { key: "human", title: "Proving you're a unique human with World ID" },
   { key: "deploy", title: "Deploying and staking your account, adding 100 test USDC" },
 ]
 
@@ -36,8 +34,6 @@ function Onboarding() {
   const [deployment, setDeployment] = useState<Deployment | null>(null)
   const [step, setStep] = useState<Step>({ kind: "welcome" })
   const [error, setError] = useState<string | null>(null)
-  const world = useWorldProof()
-  const humanCheck = useWorldGate()
 
   useEffect(() => {
     loadDeployment().then(setDeployment, (e) => setError(String(e?.message ?? e)))
@@ -50,7 +46,7 @@ function Onboarding() {
     setStep({ kind: "creating", stage: null })
     try {
       await createVault(password)
-      const account = await createAccount(deployment, (stage) => setStep({ kind: "creating", stage }), world.prove)
+      const account = await createAccount(deployment, (stage) => setStep({ kind: "creating", stage }))
       setStep({ kind: "done", account, imported: false })
     } catch (e) {
       await vaultKeyStore.clear()
@@ -97,8 +93,7 @@ function Onboarding() {
           </Card>
         )}
         {step.kind === "create" && <PasswordCard disabled={!deployment} onSubmit={create} onBack={() => setStep({ kind: "welcome" })} />}
-        {step.kind === "creating" && <CreatingCard stage={step.stage} humanCheck={humanCheck ?? false} />}
-        {world.element}
+        {step.kind === "creating" && <CreatingCard stage={step.stage} />}
         {step.kind === "import" && <ImportCard disabled={!deployment} onImport={importBackup} onBack={() => setStep({ kind: "welcome" })} />}
         {step.kind === "done" && <DoneCard account={step.account} imported={step.imported} />}
         {step.kind === "existing" && (
@@ -181,9 +176,8 @@ function PasswordCard({ disabled, onSubmit, onBack }: { disabled: boolean; onSub
   )
 }
 
-function CreatingCard({ stage, humanCheck }: { stage: OnboardStage | null; humanCheck: boolean }) {
-  const stages = STAGES.filter((s) => s.key !== "human" || humanCheck)
-  const current = stage ? stages.findIndex((s) => s.key === stage) : -1
+function CreatingCard({ stage }: { stage: OnboardStage | null }) {
+  const current = stage ? STAGES.findIndex((s) => s.key === stage) : -1
   return (
     <Card>
       <CardHeader>
@@ -191,7 +185,7 @@ function CreatingCard({ stage, humanCheck }: { stage: OnboardStage | null; human
       </CardHeader>
       <CardContent>
         <ItemGroup>
-          {stages.map((s, i) => (
+          {STAGES.map((s, i) => (
             <Item key={s.key} size="sm">
               <ItemMedia>
                 <span

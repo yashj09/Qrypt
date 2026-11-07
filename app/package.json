@@ -22,8 +22,6 @@
     "@qpay/frametx": "workspace:*",
     "@tailwindcss/vite": "^4",
     "@vercel/blob": "^2.8.2",
-    "@worldcoin/idkit": "4.6.0",
-    "@worldcoin/idkit-core": "4.6.0",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.2",
     "lucide-react": "^1.69.0",

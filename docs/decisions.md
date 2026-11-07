@@ -86,11 +86,11 @@ The product is now **Qrypt**, at `qrypt.money`. Known conflict, accepted: **Qryp
 
 **The web wallet uses the extension's dashboard.** The desktop `/app` was a light wallet column with a dark inspector always open, built for the Eyrie demo. It looked like neither the extension nor the phone. Now one dark dashboard serves the website and the extension. The inspector is a section, and a pin keeps it beside the wallet for demos, so the "watch the frames while you send" view survives without taking half the screen by default.
 
-## 7 Nov: Uniswap v4 swaps, World ID for sponsored accounts
+## 7 Nov: Uniswap v4 swaps
 
 **Deploy Uniswap v4 ourselves, from the npm artifacts.** The devnet has no DEX, and the Trading API only serves mainnet chains. The official packages ship bytecode, so nothing is recompiled. We use Universal Router 2.1.0 and encode its exact struct layouts (`ExactInputParams` has `minHopPriceX36`; single-hop doesn't), checked against the deployed router.
 
 **Swaps are one atomic batch.** EIP-8141's ATOMIC_BATCH flag (proven on the devnet with `pnpm check:atomic`) means approve plus swap can't half-happen. The Permit2 allowance expires in the same block, so nothing usable is left behind.
 
-**World ID gates only what costs us money: a new sponsored account.** Restores, recovery and every transaction stay ungated. Proof of Human is the minimum credential for "a different human". We use World ID 4.0 only, because legacy proofs would allow a second claim with a different nullifier. Proofs are bound to the key through the signal, and uniqueness is ours (a nullifier claim), not World's.
+**World ID was tried and removed.** We built a World ID Proof of Human gate on sponsored onboarding (one free account per human), and it worked end to end with the Simulator. But it added a World App step before anyone could even see the wallet, and most people don't have an Orb-verified World ID. For a devnet wallet, a smooth first minute matters more than sybil protection on test funds, so onboarding is open again. If the float ever needs protecting, a rate limit or a small paid path is lighter than an identity check.
 

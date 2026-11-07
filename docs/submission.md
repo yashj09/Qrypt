@@ -85,21 +85,9 @@ A Qrypt swap is one Falcon-signed EIP-8141 frame transaction:
 
 The wallet quotes with V4Quoter and shows price impact against `StateView`. It re-quotes before signing, and has slippage, minimum received and a high-impact confirmation. Swap is on the web, the phone and the extension. Code pointers are in the README's "Uniswap v4" section; developer feedback is in `FEEDBACK.md`.
 
-## Partner prize: World, Best Use of IDKit
-
-**Trust event:** sponsoring a new account. Each one costs our float 0.02 ETH of stake and 100 USDC, so without a check one person could drain it. **Credential:** World ID 4.0 Proof of Human, the minimum that answers "is this a different human?". Passport allows several per person, Selfie Check is medium assurance, and we need no attributes.
-
-- The proof's signal is `keccak256` of the Falcon public key being sponsored, so it can't be reused for another key.
-- The server checks the action, environment, credential and binding, verifies the proof with `developer.world.org/api/v4/verify`, and claims the nullifier atomically.
-- Paths, all tested against World's staging network with the Simulator:
-  - success;
-  - the same human again, refused and offered recovery;
-  - cancel, which returns to create, recover with Face ID, or import a backup.
-- Integration debrief: `docs/world-id.md`.
-
 ## Links
 
-- Live app: https://qrypt.money (World ID runs on a staging app: verify with the World ID Simulator)
+- Live app: https://qrypt.money
 - Demo dapp: https://qrypt.money/dapp
 - Chrome extension (load unpacked): https://qrypt.money/qrypt-extension.zip
 - Repo: https://github.com/yashj09/qpay

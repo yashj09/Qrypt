@@ -2,7 +2,7 @@
 
 **Setup before going on stage:**
 - The sidecar and tunnel are running detached (see `docs/runbook.md`). The app is live at https://qrypt.money.
-- Browser tab 1: https://qrypt.money (the landing page). Click **Open app** once beforehand so an account exists, then go back. Creating it asks for World ID: open "Use the simulator" from the QR screen and press Continue (World ID 4.0).
+- Browser tab 1: https://qrypt.money (the landing page). Click **Open app** once beforehand so an account exists, then go back.
 - Browser tab 2: the explorer, open on the last transaction (link in the README).
 - Run `pnpm send` once to warm up. Check the account shows USDC and 0 ETH.
 - In the app, open **Under the hood** and press **Keep open beside wallet**, so the inspector stays beside Send (it's remembered).

@@ -1,4 +1,4 @@
-import { createPublicClient, erc20Abi, http, keccak256, zeroAddress, type Address, type Hex } from "viem"
+import { createPublicClient, erc20Abi, http, type Address, type Hex } from "viem"
 import { falconFromSeed } from "@qpay/falcon"
 import {
   buildWalletTx,
@@ -19,7 +19,6 @@ import {
 } from "@qpay/frametx"
 import type { FrameTx } from "@forshtat/hegota-support/tx"
 import type { UniswapDeployment } from "@/lib/uniswap-v4"
-import { WorldIdError, worldRequest, type ProveHuman } from "@/lib/world"
 import { API_BASE, NODE_RPC } from "@/lib/site"
 import { keyStore } from "@/lib/keystore"
 
@@ -120,22 +119,10 @@ const converterAbi = [
   },
 ] as const
 
-const factoryAbi = [
-  { type: "function", name: "accountOf", stateMutability: "view", inputs: [{ name: "", type: "bytes32" }], outputs: [{ name: "", type: "address" }] },
-] as const
+/** Converts this browser's Falcon key to the verifier's NTT form (free eth_call) and asks the onboarding service for an account. */
+export type OnboardStage = "key" | "register" | "deploy"
 
-export type OnboardStage = "key" | "register" | "human" | "deploy"
-
-/**
- * Converts this browser's Falcon key to the verifier's NTT form (free eth_call) and asks the onboarding service for
- * an account. A new sponsored account needs a World ID Proof of Human bound to the key (`proveHuman`); a key the
- * factory already knows (a restore) skips it.
- */
-export async function createAccount(
-  d: Deployment,
-  onStage: (stage: OnboardStage) => void = () => {},
-  proveHuman?: ProveHuman,
-): Promise<Address> {
+export async function createAccount(d: Deployment, onStage: (stage: OnboardStage) => void = () => {}): Promise<Address> {
   onStage("key")
   const seed = await ensureSeed()
   onStage("register")
@@ -145,25 +132,14 @@ export async function createAccount(
     functionName: "toNttKey",
     args: [bytesToHex(signerFromSeed(seed).publicKeyCoeffs)],
   })
-  const keyHash = keccak256(pubkey)
-  const existing = await client.readContract({ address: d.factory, abi: factoryAbi, functionName: "accountOf", args: [keyHash] })
-  let world: unknown
-  if (existing === zeroAddress) {
-    const request = await worldRequest()
-    if (request) {
-      if (!proveHuman) throw new Error("Creating a sponsored account needs World ID, which this screen can't open.")
-      onStage("human")
-      world = await proveHuman(request, keyHash)
-    }
-  }
   onStage("deploy")
   const res = await fetch(`${API_BASE}/api/onboard`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ pubkey, factory: d.factory, world }),
+    body: JSON.stringify({ pubkey, factory: d.factory }),
   })
-  const body = (await res.json().catch(() => ({}))) as { account?: Address; error?: string; code?: string }
-  if (!res.ok || !body.account) throw body.code ? new WorldIdError(body.code) : new Error(body.error ?? `onboarding failed (${res.status})`)
+  const body = (await res.json().catch(() => ({}))) as { account?: Address; error?: string }
+  if (!res.ok || !body.account) throw new Error(body.error ?? `onboarding failed (${res.status})`)
   localStorage.setItem(accountKey(d), body.account)
   return body.account
 }

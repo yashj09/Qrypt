@@ -1,5 +1,4 @@
 import { chromium, type Page } from "playwright";
-import { testContext } from "./lib/test-world.ts";
 
 /**
  * The website wallet's vault end to end, with Chromium's virtual WebAuthn authenticator standing in for Face ID
@@ -42,7 +41,7 @@ async function sendOne(page: Page) {
 async function main() {
   const browser = await chromium.launch({ channel: "chromium", headless: true });
   try {
-    const page = await (await testContext(browser, { viewport: { width: 1280, height: 800 } })).newPage();
+    const page = await (await browser.newContext({ viewport: { width: 1280, height: 800 } })).newPage();
     await page.goto(`${WALLET}/app`);
     await withFaceId(page);
     await page.reload();
@@ -105,7 +104,7 @@ async function main() {
     if (forged !== 401) throw new Error(`a forged recovery upload returned ${forged}, expected 401`);
     step("a recovery upload without the account's Falcon signature is refused (401)");
 
-    const legacy = await (await testContext(browser)).newPage();
+    const legacy = await (await browser.newContext()).newPage();
     await legacy.goto(`${WALLET}/app`);
     const seed = `0x${"11".repeat(32)}`;
     await legacy.evaluate((s) => localStorage.setItem("qpay.falconSeed", s), seed);
@@ -118,7 +117,7 @@ async function main() {
     if (await legacy.evaluate(() => localStorage.getItem("qpay.falconSeed"))) throw new Error("legacy seed not removed");
     step("a legacy plain key was moved into a password vault and the plain copy deleted");
 
-    const plain = await (await testContext(browser)).newPage();
+    const plain = await (await browser.newContext()).newPage();
     await plain.goto(`${WALLET}/app`);
     await plain.locator("#vault-password").fill("fallback-password-1");
     await plain.locator("#vault-confirm").fill("fallback-password-1");

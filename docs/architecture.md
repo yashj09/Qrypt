@@ -107,17 +107,6 @@ EIP-1193 request ──▶ createQryptPopupProvider               inpage.js (EIP
 - `buildWalletTx({ atomic: true })` sets EIP-8141's ATOMIC_BATCH flag on every call frame but the last. A revert anywhere in the calls undoes all of them, while the USDC gas repayment frame stays outside the batch.
 - `useWallet().actions.swap` re-quotes before signing and returns `price-moved` instead of signing if the market moved past the reviewed minimum.
 
-## Sponsored onboarding and World ID
-
-- `api/world.ts` signs an RP context per request.
-- `createAccount` checks the factory for the key first. A new key needs `IDKitRequestWidget` with `proofOfHuman({ signal: keccak256(pubkey) })`.
-- `api/onboard.ts` (through `api/_world.ts`) then:
-  1. checks the action, environment, credential and signal binding;
-  2. verifies with World's v4 endpoint;
-  3. claims the nullifier with a no-overwrite Blob write (`world/<action>/<nullifier>.json`);
-  4. deploys the account, and releases the claim if deployment fails.
-- Test suites skip it with `x-qrypt-test-key`.
-
 ## Trust and limits
 
 - The Falcon verifier and helper are unaudited research code (ZKNOX, experimental branch).
@@ -125,5 +114,5 @@ EIP-1193 request ──▶ createQryptPopupProvider               inpage.js (EIP
 - Each user's Falcon key lives in their browser, encrypted by the vault, and is recoverable from their backup file or, with Face ID, from the ciphertext on our server.
 - Recovery and notifications use our private Blob store; notifications also need the laptop watcher.
 - The Uniswap pools are devnet test liquidity that we seeded; their prices are what we set.
-- World ID runs on a staging app during the hackathon, so Simulator identities pass. Production needs real Orb-verified humans. The CLI demo account's key lives in `.qpay/falcon-seed.hex`.
+- Onboarding is open: each new key gets a sponsored account from the operator float, with no sybil check. The CLI demo account's key lives in `.qpay/falcon-seed.hex`.
 - The extension needs the hosted wallet site to be reachable, since approvals happen there.
